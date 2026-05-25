@@ -9,22 +9,16 @@
     <link rel="stylesheet" href="css/styles.css">
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
-        /* Forzar centrado de títulos (mismo que antes) */
-        .auspiciantes-section h2,
-        .descripcion-section h2,
-        .agenda-section h2,
-        .cta-section h2 {
+        .auspiciantes-section h2, .descripcion-section h2, .agenda-section h2, .cta-section h2 {
             text-align: center !important;
             width: 100% !important;
             display: block !important;
             margin-left: auto !important;
             margin-right: auto !important;
         }
-        /* Estilos para pestañas de días en agenda pública */
         .dias-tabs-public {
             display: flex;
             justify-content: center;
@@ -44,14 +38,9 @@
             background: #e94560;
             color: white;
         }
-        /* Estilos para campos dinámicos del formulario */
-        .field-dynamic {
-            transition: all 0.3s;
-        }
     </style>
 </head>
 <body>
-
 <header>
     <div class="header-container">
         <div class="logo">
@@ -61,13 +50,10 @@
         <nav>
             <a href="#" onclick="scrollToSection('inicio')">Inicio</a>
             <a href="#" onclick="scrollToSection('agenda')">Agenda</a>
-            <button class="admin-btn" onclick="window.open('admin.html', '_blank')">
-                <i class="fas fa-lock"></i> Admin
-            </button>
+            <button class="admin-btn" onclick="window.open('admin.html', '_blank')"><i class="fas fa-lock"></i> Admin</button>
         </nav>
     </div>
 </header>
-
 <section class="hero" id="inicio">
     <div class="hero-content">
         <h1>III Seminario de Actualización Quirúrgica</h1>
@@ -78,19 +64,14 @@
         </div>
     </div>
 </section>
-
 <section class="auspiciantes-section">
     <h2 class="section-title">Auspiciantes</h2>
-    <div class="auspiciantes-carousel">
-        <div class="carousel-inner-custom" id="carouselAuspiciantes"></div>
-    </div>
+    <div class="auspiciantes-carousel"><div class="carousel-inner-custom" id="carouselAuspiciantes"></div></div>
 </section>
-
 <section class="descripcion-section">
     <h2 class="section-title">Sobre el Evento</h2>
     <div class="descripcion-content" id="descripcionEvento"></div>
 </section>
-
 <section class="agenda-section" id="agenda">
     <h2 class="section-title">Agenda del Evento</h2>
     <p class="section-subtitle">Programa completo de actividades</p>
@@ -100,13 +81,11 @@
     </div>
     <div class="agenda-grid" id="agendaGrid"></div>
 </section>
-
 <section class="cta-section">
     <h2 class="section-title">¿Listo para participar?</h2>
     <p class="section-subtitle">No te pierdas esta oportunidad de actualización profesional</p>
     <button class="cta-btn" onclick="abrirModalInscripcion()"><i class="fas fa-pen-fancy"></i> Inscribirme Ahora</button>
 </section>
-
 <!-- Modal Inscripción -->
 <div class="modal-inscripcion" id="modalInscripcion">
     <div class="modal-content-custom">
@@ -119,19 +98,19 @@
             <div class="form-group"><label>Apellido</label><input type="text" id="apellido" required></div>
             <div class="form-group"><label>Cédula</label><input type="number" id="ci" required></div>
             <div class="form-group"><label>Email</label><input type="email" id="correo" required></div>
-            
-            <!-- Nuevos campos: Facultad, Carrera, Semestre/Año -->
+            <!-- Campos opcionales para estudiantes -->
             <div class="form-group">
-                <label>Facultad</label>
-                <select id="facultad" required>
+                <label>Facultad (opcional)</label>
+                <select id="facultad">
+                    <option value="">No estudiante / No aplica</option>
                     <option value="USCA">USCA</option>
                     <option value="Otros">Otros</option>
                 </select>
                 <input type="text" id="facultadOtro" placeholder="Especifique su facultad" style="display:none; margin-top:5px;">
             </div>
             <div class="form-group">
-                <label>Carrera</label>
-                <select id="carrera" required>
+                <label>Carrera (opcional)</label>
+                <select id="carrera">
                     <option value="">Seleccione...</option>
                     <option value="Medicina">Medicina</option>
                     <option value="Odontología">Odontología</option>
@@ -145,15 +124,14 @@
                 </select>
             </div>
             <div class="form-group">
-                <label id="labelSemestreAnio">Semestre / Año</label>
-                <input type="number" id="semestreAnio" placeholder="Ej: 4" required>
+                <label id="labelSemestreAnio">Semestre / Año (opcional)</label>
+                <input type="number" id="semestreAnio" placeholder="Ej: 4">
             </div>
-            
+            <p style="font-size:0.8rem; color:#666; margin-top:0.5rem;">* Si no eres estudiante, puedes dejar estos campos vacíos.</p>
             <button type="submit" class="btn-submit">Registrarme</button>
         </form>
     </div>
 </div>
-
 <!-- Modal Carnet -->
 <div class="modal-carnet" id="modalCarnet">
     <div class="carnet-container">
@@ -169,9 +147,7 @@
         <button class="btn-descargar-carnet" onclick="descargarCarnet()">Descargar Carnet</button>
     </div>
 </div>
-
 <script>
-    // ==================== CONFIGURACIÓN FIREBASE ====================
     const firebaseConfig = {
         apiKey: "AIzaSyDCMQjh5PCz2f17xxhMF0JkGAjliCBreUg",
         authDomain: "seminario-usca.firebaseapp.com",
@@ -183,46 +159,19 @@
     };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-
-    // ==================== VARIABLES GLOBALES ====================
-    let agendaItems = [];
-    let auspiciantesItems = [];
-    let eventInfo = {};
-    let uploadedImage = null;
-    let currentDiaPublic = 1;  // 1 o 2 para la agenda pública
-
-    // ==================== FUNCIONES DE CARGA ====================
+    let agendaItems = [], auspiciantesItems = [], eventInfo = {}, uploadedImage = null, currentDiaPublic = 1;
     function cargarDatosPublicos() {
-        // Evento
         db.ref('evento').on('value', snap => {
             if (snap.val()) eventInfo = snap.val();
             else {
-                eventInfo = {
-                    descripcion: "El III Seminario de Actualización Quirúrgica es un evento de formación...",
-                    fechaInicio: "2026-08-08",
-                    fechaFin: "2026-08-09",
-                    horaInicio: "08:00",
-                    horaFin: "17:00",
-                    ubicacion: "USCA - Caaguazú"
-                };
+                eventInfo = { descripcion: "El III Seminario de Actualización Quirúrgica es un evento de formación...", fechaInicio: "2026-08-08", fechaFin: "2026-08-09", horaInicio: "08:00", horaFin: "17:00", ubicacion: "USCA - Caaguazú" };
                 db.ref('evento').set(eventInfo);
             }
             mostrarInfoEvento();
         });
-        // Agenda
-        db.ref('agenda').on('value', snap => {
-            const data = snap.val();
-            agendaItems = data ? Object.values(data) : [];
-            mostrarAgendaPublica();
-        });
-        // Auspiciantes
-        db.ref('auspiciantes').on('value', snap => {
-            const data = snap.val();
-            auspiciantesItems = data ? Object.values(data) : [];
-            mostrarAuspiciantes();
-        });
+        db.ref('agenda').on('value', snap => { agendaItems = snap.val() ? Object.values(snap.val()) : []; mostrarAgendaPublica(); });
+        db.ref('auspiciantes').on('value', snap => { auspiciantesItems = snap.val() ? Object.values(snap.val()) : []; mostrarAuspiciantes(); });
     }
-
     function mostrarInfoEvento() {
         const fechaInicio = new Date(eventInfo.fechaInicio).toLocaleDateString('es-ES', {year:'numeric',month:'long',day:'numeric'});
         const fechaFin = new Date(eventInfo.fechaFin).toLocaleDateString('es-ES', {year:'numeric',month:'long',day:'numeric'});
@@ -231,36 +180,18 @@
         document.getElementById('ubicacionEvento').innerText = eventInfo.ubicacion || "USCA";
         document.getElementById('descripcionEvento').innerHTML = `<p>${eventInfo.descripcion}</p>`;
     }
-
     function mostrarAgendaPublica() {
         const container = document.getElementById('agendaGrid');
         const actividadesDia = agendaItems.filter(item => item.dia == currentDiaPublic).sort((a,b) => a.hora.localeCompare(b.hora));
-        if (actividadesDia.length === 0) {
-            container.innerHTML = '<p>No hay actividades para este día.</p>';
-            return;
-        }
-        container.innerHTML = actividadesDia.map(item => `
-            <div class="agenda-card">
-                <div class="agenda-time">🕒 ${item.hora}</div>
-                <div class="agenda-topic">${item.tema}</div>
-                ${item.speaker ? `<div class="agenda-speaker">👨‍⚕️ ${item.speaker}</div>` : ''}
-            </div>
-        `).join('');
+        if (!actividadesDia.length) { container.innerHTML = '<p>No hay actividades para este día.</p>'; return; }
+        container.innerHTML = actividadesDia.map(item => `<div class="agenda-card"><div class="agenda-time">🕒 ${item.hora}</div><div class="agenda-topic">${item.tema}</div>${item.speaker ? `<div class="agenda-speaker">👨‍⚕️ ${item.speaker}</div>` : ''}</div>`).join('');
     }
-
     function mostrarAuspiciantes() {
         const container = document.getElementById('carouselAuspiciantes');
         if (!auspiciantesItems.length) { container.innerHTML = '<p style="text-align:center;">Próximamente auspiciantes</p>'; return; }
-        const items = [...auspiciantesItems, ...auspiciantesItems].map(a => `
-            <div class="auspiciante-item">
-                ${a.imagen ? `<img src="${a.imagen}" class="auspiciante-logo" style="height:80px;">` : `<div style="font-size:3rem;">🏥</div>`}
-                <div class="auspiciante-name">${a.nombre}</div>
-            </div>
-        `).join('');
+        const items = [...auspiciantesItems, ...auspiciantesItems].map(a => `<div class="auspiciante-item">${a.imagen ? `<img src="${a.imagen}" class="auspiciante-logo" style="height:80px;">` : `<div style="font-size:3rem;">🏥</div>`}<div class="auspiciante-name">${a.nombre}</div></div>`).join('');
         container.innerHTML = items;
     }
-
-    // ==================== INSCRIPCIÓN ====================
     function abrirModalInscripcion() { document.getElementById('modalInscripcion').classList.add('active'); }
     function cerrarModalInscripcion() { 
         document.getElementById('modalInscripcion').classList.remove('active');
@@ -276,20 +207,14 @@
         reader.onload = (ev) => { uploadedImage = ev.target.result; document.getElementById('imagePreview').innerHTML = `<img src="${uploadedImage}" style="max-width:100%; max-height:150px;">`; };
         reader.readAsDataURL(file);
     }
-
-    // Mostrar/ocultar campo "otra facultad"
     document.getElementById('facultad').addEventListener('change', function() {
-        const otro = document.getElementById('facultadOtro');
-        otro.style.display = this.value === 'Otros' ? 'block' : 'none';
-        if (this.value !== 'Otros') otro.value = '';
+        document.getElementById('facultadOtro').style.display = this.value === 'Otros' ? 'block' : 'none';
+        if (this.value !== 'Otros') document.getElementById('facultadOtro').value = '';
     });
-    // Cambiar etiqueta según carrera
     document.getElementById('carrera').addEventListener('change', function() {
         const label = document.getElementById('labelSemestreAnio');
-        if (this.value === 'Medicina') label.innerText = 'Semestre';
-        else label.innerText = 'Año';
+        label.innerText = this.value === 'Medicina' ? 'Semestre (opcional)' : 'Año (opcional)';
     });
-
     function registrarInscrito(e) {
         e.preventDefault();
         if(!uploadedImage) { alert('Carga el comprobante'); return; }
@@ -299,44 +224,26 @@
         const correo = document.getElementById('correo').value.trim();
         let facultad = document.getElementById('facultad').value;
         if (facultad === 'Otros') facultad = document.getElementById('facultadOtro').value.trim();
-        if (!facultad) facultad = 'No especificada';
         const carrera = document.getElementById('carrera').value;
         const semestreAnio = document.getElementById('semestreAnio').value;
-        if(!nombre||!apellido||!ci||!correo||!carrera||!semestreAnio) { alert('Completa todos los campos'); return; }
-        
+        if(!nombre||!apellido||!ci||!correo) { alert('Completa los campos obligatorios (nombre, apellido, cédula, email)'); return; }
         const nuevo = { 
-            id: Date.now().toString(), 
-            nombre, apellido, ci, correo, 
-            comprobante: uploadedImage, 
-            fecha: new Date().toISOString(), 
-            pagoVerificado: false,
-            presente: false,
-            facultad,
-            carrera,
-            semestreAnio
+            id: Date.now().toString(), nombre, apellido, ci, correo, comprobante: uploadedImage, fecha: new Date().toISOString(), 
+            pagoVerificado: false, presente: false,
+            facultad: facultad || '', carrera: carrera || '', semestreAnio: semestreAnio || ''
         };
-        db.ref('inscritos/' + nuevo.id).set(nuevo).then(() => {
-            mostrarCarnet(`${nombre} ${apellido}`, ci, nuevo.id);
-            cerrarModalInscripcion();
-        }).catch(err => alert('Error al guardar: ' + err.message));
+        db.ref('inscritos/' + nuevo.id).set(nuevo).then(() => { mostrarCarnet(`${nombre} ${apellido}`, ci, nuevo.id); cerrarModalInscripcion(); }).catch(err => alert('Error al guardar: ' + err.message));
     }
-
     function mostrarCarnet(nombreCompleto, ci, qrData) {
         document.getElementById('carnetNombre').innerText = nombreCompleto.toUpperCase();
         document.getElementById('carnetCI').innerText = `CI: ${ci}`;
-        const qrDiv = document.getElementById('carnetQR');
-        qrDiv.innerHTML = '';
+        const qrDiv = document.getElementById('carnetQR'); qrDiv.innerHTML = '';
         new QRCode(qrDiv, { text: qrData, width: 150, height: 150, colorDark: "#0f3460", colorLight: "#ffffff" });
         document.getElementById('modalCarnet').classList.add('active');
     }
     function cerrarCarnet() { document.getElementById('modalCarnet').classList.remove('active'); }
-    function descargarCarnet() { 
-        const carnet = document.querySelector('.carnet'); 
-        html2canvas(carnet, { scale:2 }).then(canvas=>{ const link = document.createElement('a'); link.download = 'carnet.png'; link.href = canvas.toDataURL(); link.click(); }).catch(()=>alert('Captura de pantalla')); 
-    }
+    function descargarCarnet() { const carnet = document.querySelector('.carnet'); html2canvas(carnet, { scale:2 }).then(canvas=>{ const link = document.createElement('a'); link.download = 'carnet.png'; link.href = canvas.toDataURL(); link.click(); }).catch(()=>alert('Captura de pantalla')); }
     function scrollToSection(id) { document.getElementById(id).scrollIntoView({ behavior:'smooth' }); }
-
-    // Pestañas de agenda pública
     document.querySelectorAll('.dia-tab-public').forEach(tab => {
         tab.addEventListener('click', (e) => {
             document.querySelectorAll('.dia-tab-public').forEach(t => t.classList.remove('active'));
@@ -345,7 +252,6 @@
             mostrarAgendaPublica();
         });
     });
-
     cargarDatosPublicos();
 </script>
 </body>

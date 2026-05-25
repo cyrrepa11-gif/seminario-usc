@@ -720,6 +720,7 @@
         }
     }
 
+    // 📌 CORRECCIÓN DEL PDF: tabla bien formateada, sin encimamiento
     function exportarInscritosPDF() {
         let filtrados = [...inscritos];
         const term = searchTerm.trim().toLowerCase();
@@ -738,36 +739,59 @@
         const logoImg = document.querySelector('.logo-area img')?.src || 'assets/logo.png';
         const fechaInicio = new Date(eventInfo.fechaInicio).toLocaleDateString('es-ES');
         const fechaFin = new Date(eventInfo.fechaFin).toLocaleDateString('es-ES');
+        
+        // Construcción mejorada de la tabla con estilos inline para que no se encime
         let tablaHtml = `
             <div style="font-family:'Inter',sans-serif; padding:20px;">
                 <div style="text-align:center; border-bottom:2px solid #0f3460; margin-bottom:20px;">
-                    <img src="${logoImg}" style="height:60px;"><h2 style="color:#0f3460;">III SEMINARIO DE ACTUALIZACIÓN QUIRÚRGICA</h2>
+                    <img src="${logoImg}" style="height:60px;">
+                    <h2 style="color:#0f3460;">III SEMINARIO DE ACTUALIZACIÓN QUIRÚRGICA</h2>
                     <p>${fechaInicio} - ${fechaFin} | ${eventInfo.horaInicio} a ${eventInfo.horaFin}<br>${eventInfo.ubicacion}</p>
                 </div>
                 <h3>LISTA DE INSCRITOS</h3>
-                <table style="width:100%; border-collapse:collapse;">
-                    <thead><tr style="background:#0f3460; color:white;"><th>N°</th><th>Nombre</th><th>Cédula</th><th>Email</th><th>Facultad</th><th>Carrera</th><th>Semestre/Año</th><th>Pago</th><th>Asistencia</th></tr></thead>
-                    <tbody>`;
+                <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                    <thead>
+                        <tr style="background:#0f3460; color:white;">
+                            <th style="padding:8px; border:1px solid #ddd;">N°</th>
+                            <th style="padding:8px; border:1px solid #ddd;">Nombre completo</th>
+                            <th style="padding:8px; border:1px solid #ddd;">Cédula</th>
+                            <th style="padding:8px; border:1px solid #ddd;">Email</th>
+                            <th style="padding:8px; border:1px solid #ddd;">Facultad</th>
+                            <th style="padding:8px; border:1px solid #ddd;">Carrera</th>
+                            <th style="padding:8px; border:1px solid #ddd;">Sem/Año</th>
+                            <th style="padding:8px; border:1px solid #ddd;">Pago</th>
+                            <th style="padding:8px; border:1px solid #ddd;">Asistencia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
         filtrados.forEach((i, idx) => {
             tablaHtml += `<tr>
-                <td style="border:1px solid #ddd; padding:8px;">${idx+1}</td>
-                <td style="border:1px solid #ddd; padding:8px;">${i.nombre} ${i.apellido}</td>
-                <td style="border:1px solid #ddd; padding:8px;">${i.ci}</td>
-                <td style="border:1px solid #ddd; padding:8px;">${i.correo}</td>
-                <td style="border:1px solid #ddd; padding:8px;">${i.facultad || '-'}</td>
-                <td style="border:1px solid #ddd; padding:8px;">${i.carrera || '-'}</td>
-                <td style="border:1px solid #ddd; padding:8px;">${i.semestreAnio || '-'}</td>
-                <td style="border:1px solid #ddd; padding:8px;">${i.pagoVerificado ? 'Sí' : 'No'}</td>
-                <td style="border:1px solid #ddd; padding:8px;">${i.presente ? 'Presente' : 'Ausente'}</td>
+                <td style="padding:8px; border:1px solid #ddd; text-align:center;">${idx+1}</td>
+                <td style="padding:8px; border:1px solid #ddd;">${i.nombre} ${i.apellido}</td>
+                <td style="padding:8px; border:1px solid #ddd;">${i.ci}</td>
+                <td style="padding:8px; border:1px solid #ddd;">${i.correo}</td>
+                <td style="padding:8px; border:1px solid #ddd;">${i.facultad || '-'}</td>
+                <td style="padding:8px; border:1px solid #ddd;">${i.carrera || '-'}</td>
+                <td style="padding:8px; border:1px solid #ddd;">${i.semestreAnio || '-'}</td>
+                <td style="padding:8px; border:1px solid #ddd; text-align:center;">${i.pagoVerificado ? 'Sí' : 'No'}</td>
+                <td style="padding:8px; border:1px solid #ddd; text-align:center;">${i.presente ? 'Presente' : 'Ausente'}</td>
             </tr>`;
         });
-        tablaHtml += `</tbody></table><div style="text-align:center; margin-top:20px;">Seminario USCA - ${fechaInicio}</div></div>`;
+        tablaHtml += `
+                    </tbody>
+                </table>
+                <div style="text-align:center; margin-top:20px;">Seminario USCA - ${fechaInicio}</div>
+            </div>
+        `;
+        
         const element = document.createElement('div');
         element.innerHTML = tablaHtml;
         document.body.appendChild(element);
         html2pdf().set({ margin: 0.5, filename: `inscritos_${eventInfo.fechaInicio}.pdf`, html2canvas: { scale: 2 } }).from(element).save().then(() => element.remove());
     }
-        // ==================== CARNET ADMIN ====================
+
+    // ==================== CARNET ADMIN ====================
     function mostrarCarnetAdmin(nombreCompleto, ci, id) {
         const qrTexto = `ID: ${id}\nNombre: ${nombreCompleto}\nCI: ${ci}`;
         const container = document.getElementById('carnetAdminContent');
@@ -991,7 +1015,7 @@
             const actividades = agenda.filter(a => a.dia == d).sort((a, b) => a.hora.localeCompare(b.hora));
             html += `<h3>Día ${d} - ${d === 1 ? dia1 : dia2}</h3>
                 <table style="width:100%; border-collapse:collapse;">
-                    <thead><tr style="background:#0f3460; color:white;"><th>Hora</th><th>Tema</th><th>Expositor</th></tr></thead>
+                    <thead><tr style="background:#0f3460; color:white;"><th>Hora</th><th>Tema</th><th>Expositor</th><tr></thead>
                     <tbody>`;
             actividades.forEach(a => html += `<tr><td style="border:1px solid #ddd; padding:8px;">${a.hora}</td><td style="border:1px solid #ddd; padding:8px;">${a.tema}</td><td style="border:1px solid #ddd; padding:8px;">${a.speaker || '---'}</td></tr>`);
             html += `</tbody></table><br>`;
