@@ -10,9 +10,44 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <style>
+        /* Estilos para el carnet en el modal */
+        .modal-carnet-admin {
+            display: none;
+            position: fixed;
+            z-index: 1100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-carnet-admin.active {
+            display: flex;
+        }
+        .carnet-preview {
+            background: white;
+            border-radius: 16px;
+            padding: 1rem;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+        .carnet-preview .carnet {
+            margin: 0 auto;
+        }
+        .btn-imprimir {
+            background: #0f3460;
+            margin-top: 1rem;
+        }
+    </style>
 </head>
 <body>
 
@@ -52,7 +87,18 @@
     </div>
 </div>
 
+<!-- Modal para ver imagen grande -->
 <div id="modalImagen" class="modal-imagen" onclick="cerrarModalImagen()"><img id="imgGrande" src=""></div>
+
+<!-- Modal para previsualizar carnet -->
+<div id="modalCarnetAdmin" class="modal-carnet-admin">
+    <div class="carnet-preview">
+        <span style="float: right; font-size: 24px; cursor: pointer;" onclick="cerrarModalCarnetAdmin()">&times;</span>
+        <div id="carnetAdminContent"></div>
+        <button class="btn" onclick="imprimirCarnet()"><i class="fas fa-print"></i> Imprimir</button>
+        <button class="btn btn-imprimir" onclick="descargarCarnetAdmin()"><i class="fas fa-download"></i> Descargar PNG</button>
+    </div>
+</div>
 
 <script>
     // ==================== CONFIGURACIÓN FIREBASE ====================
@@ -168,6 +214,72 @@
         return str.toLowerCase().replace(/\s/g, '');
     }
     
+    // Función para mostrar carnet (reutilizada del index)
+    function mostrarCarnetAdmin(nombreCompleto, ci, qrData) {
+        const container = document.getElementById('carnetAdminContent');
+        container.innerHTML = `
+            <div class="carnet">
+                <div class="carnet-header"><img src="assets/logo.png" style="height: 40px; margin-right: 10px;"> III SEMINARIO USCA</div>
+                <div class="carnet-nombre">${nombreCompleto.toUpperCase()}</div>
+                <div class="carnet-ci">CI: ${ci}</div>
+                <div id="carnetQRAdmin"></div>
+                <div class="carnet-footer">${new Date(eventInfo.fecha).toLocaleDateString('es-ES')}</div>
+            </div>
+        `;
+        const qrDiv = document.getElementById('carnetQRAdmin');
+        qrDiv.innerHTML = '';
+        new QRCode(qrDiv, { text: qrData, width: 150, height: 150, colorDark: "#0f3460", colorLight: "#ffffff" });
+        document.getElementById('modalCarnetAdmin').classList.add('active');
+    }
+    
+    function cerrarModalCarnetAdmin() {
+        document.getElementById('modalCarnetAdmin').classList.remove('active');
+    }
+    
+    function imprimirCarnet() {
+        const carnetHTML = document.querySelector('#carnetAdminContent .carnet').cloneNode(true);
+        const ventana = window.open('', '_blank');
+        ventana.document.write(`
+            <html><head><title>Carnet - Seminario USCA</title>
+            <style>
+                body { font-family: 'Poppins', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f0f4f8; }
+                .carnet { background: linear-gradient(135deg, #0f3460 0%, #1a4d7a 100%); color: white; padding: 1.5rem; border-radius: 16px; text-align: center; width: 400px; margin: auto; }
+                .carnet-header { font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+                .carnet-nombre { font-size: 1.3rem; font-weight: 800; margin: 0.5rem 0; }
+                img { max-width: 100%; }
+            </style>
+            </head><body>
+            ${carnetHTML.outerHTML}
+            <script>window.onload = function() { window.print(); setTimeout(() => window.close(), 500); }<\/script>
+            </body></html>
+        `);
+        ventana.document.close();
+    }
+    
+    function descargarCarnetAdmin() {
+        const carnetElement = document.querySelector('#carnetAdminContent .carnet');
+        html2canvas(carnetElement, { scale: 2 }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = 'carnet.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }).catch(() => alert('Error al generar la imagen'));
+    }
+    
+    function eliminarInscrito(id, nombre) {
+        if (confirm(`¿Estás seguro de que deseas eliminar a ${nombre}? Esta acción no se puede deshacer.`)) {
+            const password = prompt("Para confirmar la eliminación, ingresa la contraseña de administrador:");
+            if (password === "2000") {
+                db.ref('inscritos/' + id).remove().then(() => {
+                    alert("Inscrito eliminado correctamente.");
+                    actualizarListaInscritos();
+                }).catch(err => alert("Error al eliminar: " + err.message));
+            } else {
+                alert("Contraseña incorrecta. Eliminación cancelada.");
+            }
+        }
+    }
+    
     function actualizarListaInscritos() {
         const container = document.getElementById('listaInscritosContainer');
         if (!container) return;
@@ -205,6 +317,12 @@
                     <button class="btn btn-sm ${i.presente ? 'btn-warning' : 'btn-success'}" onclick="toggleAsistencia('${i.id}')">
                         ${i.presente ? 'Quitar asistencia' : 'Marcar asistencia'}
                     </button>
+                    <button class="btn btn-sm btn-danger" onclick="eliminarInscrito('${i.id}', '${i.nombre} ${i.apellido}')">
+                        <i class="fas fa-trash"></i> Eliminar
+                    </button>
+                    <button class="btn btn-sm" style="background:#0f3460;" onclick="mostrarCarnetAdmin('${i.nombre} ${i.apellido}', '${i.ci}', '${i.id}')">
+                        <i class="fas fa-id-card"></i> Carnet
+                    </button>
                 </div>
             </div>`;
         });
@@ -223,7 +341,7 @@
         actualizarListaInscritos();
     };
     
-    // ==================== RENDERIZAR SECCIONES (llamadas por cambiarSeccion) ====================
+    // ==================== RENDERIZAR SECCIONES ====================
     function renderDashboard() {
         return `<div class="kpi-grid" id="kpiContainer"></div><div class="section-card"><div class="section-title"><i class="fas fa-info-circle"></i> Resumen del evento</div><p id="resumenEvento"></p><canvas id="chartInscritos" style="max-height:250px; margin-top:1rem;"></canvas></div>`;
     }
@@ -314,9 +432,7 @@
             const inscrito = snap.val();
             if(inscrito) {
                 inscrito.pagoVerificado = !inscrito.pagoVerificado;
-                ref.set(inscrito).then(() => {
-                    cambiarSeccion('inscritos');
-                });
+                ref.set(inscrito);
             }
         });
     };
@@ -327,9 +443,7 @@
             const inscrito = snap.val();
             if(inscrito) {
                 inscrito.presente = !inscrito.presente;
-                ref.set(inscrito).then(() => {
-                    cambiarSeccion('inscritos');
-                });
+                ref.set(inscrito);
             }
         });
     };
@@ -356,7 +470,7 @@
     }
     window.exportarExcel = exportarExcel;
     
-    // ==================== ESCÁNER QR (con toggle en Firebase) ====================
+    // ==================== ESCÁNER QR ====================
     window.iniciarEscaner = function() {
         let video = document.getElementById('scannerVideo');
         navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(stream => {
@@ -459,6 +573,11 @@
     };
     
     window.cambiarSeccion = cambiarSeccion;
+    window.cerrarModalCarnetAdmin = cerrarModalCarnetAdmin;
+    window.imprimirCarnet = imprimirCarnet;
+    window.descargarCarnetAdmin = descargarCarnetAdmin;
+    window.mostrarCarnetAdmin = mostrarCarnetAdmin;
+    window.eliminarInscrito = eliminarInscrito;
     
     document.querySelectorAll('.nav-item').forEach(el => {
         el.addEventListener('click', () => cambiarSeccion(el.getAttribute('data-tab')));
