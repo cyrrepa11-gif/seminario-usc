@@ -456,9 +456,9 @@
     let searchTerm = '';
     let filtros = { facultad: '', carrera: '', semestreAnio: '' };
     let currentDiaAdmin = 1;
-    let myChart = null; // para el gráfico
+    let myChart = null;
 
-    // ==================== SESIÓN (persistente) ====================
+    // ==================== SESIÓN ====================
     function checkSession() {
         const loginScreen = safeGetElement('loginScreen');
         const adminPanel = safeGetElement('adminPanel');
@@ -473,11 +473,16 @@
         }
     }
 
-    // ==================== CARGA DE DATOS EN TIEMPO REAL ====================
+    // ==================== CARGA DE DATOS (FILTRANDO ACTIVIDADES VÁLIDAS) ====================
     function cargarDatos() {
         db.ref('agenda').on('value', snap => {
             const data = snap.val();
-            agenda = data ? Object.values(data) : [];
+            // Solo guardar actividades que tengan día 1 o 2 (ignorar huérfanas)
+            if (data) {
+                agenda = Object.values(data).filter(item => item.dia === 1 || item.dia === 2);
+            } else {
+                agenda = [];
+            }
             if (safeGetElement('listaAgenda')) actualizarListaAgenda();
             if (safeGetElement('chartInscritos')) actualizarDashboard();
         });
@@ -510,7 +515,7 @@
         });
     }
 
-    // ==================== DASHBOARD ====================
+    // ==================== DASHBOARD (con actividades válidas) ====================
     function actualizarDashboard() {
         const kpiContainer = safeGetElement('kpiContainer');
         const resumenEvento = safeGetElement('resumenEvento');
@@ -520,6 +525,7 @@
         const total = inscritos.length;
         const pagos = inscritos.filter(i => i.pagoVerificado).length;
         const presentes = inscritos.filter(i => i.presente).length;
+        // Usamos agenda.length que ya solo contiene actividades con día 1 o 2
         kpiContainer.innerHTML = `
             <div class="kpi-card"><div><div class="kpi-number">${total}</div><div>Inscritos</div></div><i class="fas fa-users"></i></div>
             <div class="kpi-card"><div><div class="kpi-number">${pagos}</div><div>Pagos OK</div></div><i class="fas fa-credit-card"></i></div>
@@ -567,7 +573,7 @@
         cambiarSeccion('dashboard');
     }
 
-    // ==================== AGENDA (2 días, ordenada) ====================
+    // ==================== AGENDA ====================
     function actualizarListaAgenda() {
         const container = safeGetElement('listaAgenda');
         if (!container) return;
@@ -651,7 +657,7 @@
         if (confirm("¿Eliminar auspiciante?")) db.ref('auspiciantes/' + id).remove().then(() => cambiarSeccion('auspiciantes'));
     }
 
-    // ==================== INSCRITOS (con filtros y orden) ====================
+    // ==================== INSCRITOS ====================
     function aplicarFiltros() {
         const filtroFacultad = safeGetElement('filtroFacultad');
         const filtroCarrera = safeGetElement('filtroCarrera');
@@ -747,7 +753,7 @@
         }
     }
 
-    // ========== EXPORTAR INSCRITOS A PDF (CORREGIDO, SIN ENCIMAMIENTO) ==========
+    // ========== EXPORTAR INSCRITOS A PDF ==========
     function exportarInscritosPDF() {
         let filtrados = [...inscritos];
         const term = searchTerm.trim().toLowerCase();
@@ -859,7 +865,7 @@
         }).catch(() => alert('Error al generar la imagen'));
     }
 
-    // ==================== ESCÁNER QR OPTIMIZADO ====================
+    // ==================== ESCÁNER QR ====================
     function iniciarEscaner() {
         const video = safeGetElement('scannerVideo');
         if (!video) return;
@@ -945,7 +951,7 @@
         }
     }
 
-    // ==================== RENDERIZADO DE SECCIONES (HTML dinámico) ====================
+    // ==================== RENDERIZADO DE SECCIONES ====================
     function renderDashboard() {
         return `<div class="kpi-grid" id="kpiContainer"></div><div class="section-card"><div class="section-title">Resumen del evento</div><p id="resumenEvento"></p><canvas id="chartInscritos" style="max-height:250px;"></canvas></div>`;
     }
@@ -1059,7 +1065,7 @@
                     <thead><tr style="background:#0f3460; color:white;"><th>Hora</th><th>Tema</th><th>Expositor</th></tr></thead>
                     <tbody>`;
             actividades.forEach(a => html += `<tr><td style="border:1px solid #ddd; padding:8px;">${a.hora}</td><td style="border:1px solid #ddd; padding:8px;">${a.tema}</td><td style="border:1px solid #ddd; padding:8px;">${a.speaker || '---'}</td></tr>`);
-            html += `</tbody></table><br>`;
+            html += `</tbody><td><br>`;
         }
         html += `<div style="text-align:center;">Seminario USCA - ${dia1}</div></div>`;
         const element = document.createElement('div');
