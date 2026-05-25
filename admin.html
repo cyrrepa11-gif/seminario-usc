@@ -42,6 +42,11 @@
         }
         .carnet-preview .carnet {
             margin: 0 auto;
+            position: relative;
+            background: linear-gradient(135deg, #0f3460 0%, #1a4d7a 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 1.5rem;
         }
         .btn-imprimir {
             background: #0f3460;
@@ -51,6 +56,20 @@
         #carnetQRAdmin {
             display: flex;
             justify-content: center;
+        }
+        /* Ajuste para impresión */
+        @media print {
+            .modal-carnet-admin {
+                position: absolute;
+                background: white;
+            }
+            .carnet-preview {
+                box-shadow: none;
+                padding: 0;
+            }
+            .btn, .close {
+                display: none;
+            }
         }
     </style>
 </head>
@@ -219,19 +238,27 @@
         return str.toLowerCase().replace(/\s/g, '');
     }
     
-    // ---- FUNCIÓN MODIFICADA DEL CARNET PARA ADMIN ----
+    // ---- FUNCIÓN MODIFICADA DEL CARNET PARA ADMIN (con logo circular y título centrado) ----
     function mostrarCarnetAdmin(nombreCompleto, ci, qrData) {
         const container = document.getElementById('carnetAdminContent');
         container.innerHTML = `
-            <div class="carnet">
-                <div class="carnet-header" style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px;">
-                    <img src="assets/logo.png" style="height: 60px; width: auto;">
-                    <div style="font-size: 1.1rem; font-weight: 700; line-height: 1.2;">III Seminario de<br>Actualización Quirúrgica</div>
+            <div class="carnet" style="position: relative; padding: 1.5rem;">
+                <!-- Logo circular arriba a la izquierda -->
+                <div style="position: absolute; top: 15px; left: 15px;">
+                    <img src="assets/logo.png" style="width: 70px; height: 70px; object-fit: cover; border-radius: 50%; border: 2px solid white; background: white;">
                 </div>
-                <div class="carnet-nombre" style="font-size: 1.3rem; font-weight: 800; margin: 15px 0 5px;">${nombreCompleto.toUpperCase()}</div>
-                <div class="carnet-ci">CI: ${ci}</div>
+                <!-- Título centrado -->
+                <div style="text-align: center; font-weight: 800; font-size: 1.2rem; line-height: 1.3; margin: 0 0 20px 0;">
+                    III Seminario de<br>Actualización Quirúrgica
+                </div>
+                <!-- Nombre del participante centrado -->
+                <div class="carnet-nombre" style="font-size: 1.4rem; font-weight: 800; margin: 10px 0 5px; text-align: center;">${nombreCompleto.toUpperCase()}</div>
+                <!-- CI -->
+                <div class="carnet-ci" style="text-align: center;">CI: ${ci}</div>
+                <!-- QR centrado -->
                 <div id="carnetQRAdmin" style="display: flex; justify-content: center; margin: 15px auto;"></div>
-                <div class="carnet-footer" style="margin-top: 10px; font-size: 0.9rem;">Caaguazú 2026</div>
+                <!-- Pie de página -->
+                <div class="carnet-footer" style="margin-top: 10px; font-size: 0.9rem; text-align: center;">Caaguazú 2026</div>
             </div>
         `;
         const qrDiv = document.getElementById('carnetQRAdmin');
@@ -257,11 +284,17 @@
             <html><head><title>Carnet - Seminario USCA</title>
             <style>
                 body { font-family: 'Poppins', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f0f4f8; }
-                .carnet { background: linear-gradient(135deg, #0f3460 0%, #1a4d7a 100%); color: white; padding: 1.5rem; border-radius: 16px; text-align: center; width: 400px; margin: auto; }
+                .carnet { background: linear-gradient(135deg, #0f3460 0%, #1a4d7a 100%); color: white; padding: 1.5rem; border-radius: 16px; text-align: center; width: 400px; margin: auto; position: relative; }
                 .carnet-header { display: flex; align-items: center; justify-content: center; gap: 10px; }
                 .carnet-nombre { font-size: 1.3rem; font-weight: 800; margin: 0.5rem 0; }
                 img { max-width: 100%; }
                 #carnetQRAdmin { display: flex; justify-content: center; }
+                /* Asegurar que el logo circular se vea bien en impresión */
+                .carnet div[style*="position: absolute"] {
+                    position: absolute !important;
+                    top: 15px !important;
+                    left: 15px !important;
+                }
             </style>
             </head><body>
             ${carnetHTML.outerHTML}
