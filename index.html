@@ -9,6 +9,19 @@
     <link rel="stylesheet" href="css/styles.css">
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* ESTILO ADICIONAL PARA FORZAR CENTRADO DE TÍTULOS (por si acaso) */
+        .auspiciantes-section h2,
+        .descripcion-section h2,
+        .agenda-section h2,
+        .cta-section h2 {
+            text-align: center !important;
+            width: 100% !important;
+            display: block !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+        }
+    </style>
 </head>
 <body>
 
@@ -59,6 +72,7 @@
 
 <section class="cta-section">
     <h2 class="section-title">¿Listo para participar?</h2>
+    <p class="section-subtitle">No te pierdas esta oportunidad de actualización profesional</p>
     <button class="cta-btn" onclick="abrirModalInscripcion()"><i class="fas fa-pen-fancy"></i> Inscribirme Ahora</button>
 </section>
 
