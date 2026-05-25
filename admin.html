@@ -10,9 +10,13 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 </head>
 <body>
 
+<!-- Pantalla de login -->
 <div id="loginScreen" class="login-container">
     <div class="login-card">
         <i class="fas fa-lock" style="font-size: 3rem; color:#0f3460;"></i>
@@ -23,6 +27,7 @@
     </div>
 </div>
 
+<!-- Panel Admin -->
 <div id="adminPanel" class="admin-panel">
     <div class="admin-header">
         <div class="logo-area">
@@ -50,223 +55,294 @@
 <div id="modalImagen" class="modal-imagen" onclick="cerrarModalImagen()"><img id="imgGrande" src=""></div>
 
 <script>
-    // ==================== DATOS (LOCALSTORAGE) ====================
-    let agenda = [], auspiciantes = [], inscritos = [], eventInfo = {};
+    // ==================== CONFIGURACIÓN FIREBASE ====================
+    const firebaseConfig = {
+        apiKey: "AIzaSyDCMQjh5PCz2f17xxhMF0JkGAjliCBreUg",
+        authDomain: "seminario-usca.firebaseapp.com",
+        databaseURL: "https://seminario-usca-default-rtdb.firebaseio.com",
+        projectId: "seminario-usca",
+        storageBucket: "seminario-usca.firebasestorage.app",
+        messagingSenderId: "560733409147",
+        appId: "1:560733409147:web:13f01f10f3ee961ab677de"
+    };
+    
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
+    
+    // ==================== VARIABLES GLOBALES ====================
+    let agenda = [];
+    let auspiciantes = [];
+    let inscritos = [];
+    let eventInfo = {};
     let scannerActive = false, scannerStream = null, scannerAnimation = null;
     let searchTerm = '';
-
+    
+    // ==================== FUNCIONES DE CARGA EN TIEMPO REAL ====================
     function cargarDatos() {
-        agenda = JSON.parse(localStorage.getItem('agenda_items') || '[{"id":"1","hora":"08:00","tema":"Bienvenida","speaker":"Director"},{"id":"2","hora":"09:00","tema":"Laparoscopia","speaker":"Dr. García"},{"id":"3","hora":"10:30","tema":"Receso","speaker":""},{"id":"4","hora":"11:00","tema":"Protocolos Quirúrgicos Modernos","speaker":"Dra. López"},{"id":"5","hora":"12:30","tema":"Almuerzo","speaker":""},{"id":"6","hora":"14:00","tema":"Panel de Especialistas","speaker":"Equipo Médico"},{"id":"7","hora":"15:30","tema":"Taller Práctico","speaker":"Profesor Torres"},{"id":"8","hora":"17:00","tema":"Clausura","speaker":"Director USCA"}]');
-        auspiciantes = JSON.parse(localStorage.getItem('auspiciantes_items') || '[]');
-        inscritos = JSON.parse(localStorage.getItem('inscritos_items') || '[]');
-        eventInfo = JSON.parse(localStorage.getItem('evento_info') || '{"descripcion":"Evento de actualización quirúrgica","fecha":"2026-08-08","horaInicio":"08:00","horaFin":"17:00"}');
+        db.ref('agenda').on('value', snap => {
+            if(snap.val()) agenda = Object.values(snap.val());
+            else agenda = [];
+            if(document.getElementById('listaAgenda')) actualizarListaAgenda();
+            if(document.getElementById('chartInscritos')) actualizarDashboard();
+        });
+        db.ref('auspiciantes').on('value', snap => {
+            if(snap.val()) auspiciantes = Object.values(snap.val());
+            else auspiciantes = [];
+            if(document.getElementById('listaAuspiciantes')) actualizarListaAuspiciantes();
+        });
+        db.ref('inscritos').on('value', snap => {
+            if(snap.val()) inscritos = Object.values(snap.val());
+            else inscritos = [];
+            if(document.getElementById('listaInscritosContainer')) actualizarListaInscritos();
+            if(document.getElementById('chartInscritos')) actualizarDashboard();
+        });
+        db.ref('evento').on('value', snap => {
+            if(snap.val()) eventInfo = snap.val();
+            else {
+                eventInfo = {
+                    descripcion: "Evento de actualización quirúrgica",
+                    fecha: "2026-08-08",
+                    horaInicio: "08:00",
+                    horaFin: "17:00"
+                };
+                db.ref('evento').set(eventInfo);
+            }
+            if(document.getElementById('descEvento')) cargarEventoAlFormulario();
+            if(document.getElementById('chartInscritos')) actualizarDashboard();
+        });
     }
-    function guardarDatos() {
-        localStorage.setItem('agenda_items', JSON.stringify(agenda));
-        localStorage.setItem('auspiciantes_items', JSON.stringify(auspiciantes));
-        localStorage.setItem('inscritos_items', JSON.stringify(inscritos));
-        localStorage.setItem('evento_info', JSON.stringify(eventInfo));
-    }
-
-    // ==================== TOGGLES ====================
-    window.togglePago = function(id) {
-        let idx = inscritos.findIndex(i => i.id === id);
-        if(idx !== -1) { inscritos[idx].pagoVerificado = !inscritos[idx].pagoVerificado; guardarDatos(); cambiarSeccion('inscritos'); }
-    };
-    window.toggleAsistencia = function(id) {
-        let idx = inscritos.findIndex(i => i.id === id);
-        if(idx !== -1) { inscritos[idx].presente = !inscritos[idx].presente; guardarDatos(); cambiarSeccion('inscritos'); }
-    };
-
-    // ==================== RENDERIZADO DE SECCIONES ====================
-    function renderDashboard() {
+    
+    // ==================== FUNCIONES DE VISTA ====================
+    function actualizarDashboard() {
         const total = inscritos.length, pagos = inscritos.filter(i=>i.pagoVerificado).length, presentes = inscritos.filter(i=>i.presente).length;
-        return `
-            <div class="kpi-grid">
-                <div class="kpi-card"><div class="kpi-info"><h3>Inscritos</h3><div class="kpi-number">${total}</div></div><div class="kpi-icon"><i class="fas fa-users"></i></div></div>
-                <div class="kpi-card"><div class="kpi-info"><h3>Pagos verificados</h3><div class="kpi-number">${pagos}</div></div><div class="kpi-icon"><i class="fas fa-credit-card"></i></div></div>
-                <div class="kpi-card"><div class="kpi-info"><h3>Asistencia confirmada</h3><div class="kpi-number">${presentes}</div></div><div class="kpi-icon"><i class="fas fa-check-circle"></i></div></div>
-                <div class="kpi-card"><div class="kpi-info"><h3>Actividades</h3><div class="kpi-number">${agenda.length}</div></div><div class="kpi-icon"><i class="fas fa-calendar"></i></div></div>
-            </div>
-            <div class="section-card">
-                <div class="section-title"><i class="fas fa-info-circle"></i> Resumen del evento</div>
-                <p>📅 ${new Date(eventInfo.fecha).toLocaleDateString('es-ES')} - ${eventInfo.horaInicio} a ${eventInfo.horaFin}</p>
-                <canvas id="chartInscritos" style="max-height:250px; margin-top:1rem;"></canvas>
-            </div>
+        document.getElementById('kpiContainer').innerHTML = `
+            <div class="kpi-card"><div class="kpi-info"><h3>Inscritos</h3><div class="kpi-number">${total}</div></div><div class="kpi-icon"><i class="fas fa-users"></i></div></div>
+            <div class="kpi-card"><div class="kpi-info"><h3>Pagos verificados</h3><div class="kpi-number">${pagos}</div></div><div class="kpi-icon"><i class="fas fa-credit-card"></i></div></div>
+            <div class="kpi-card"><div class="kpi-info"><h3>Asistencia confirmada</h3><div class="kpi-number">${presentes}</div></div><div class="kpi-icon"><i class="fas fa-check-circle"></i></div></div>
+            <div class="kpi-card"><div class="kpi-info"><h3>Actividades</h3><div class="kpi-number">${agenda.length}</div></div><div class="kpi-icon"><i class="fas fa-calendar"></i></div></div>
         `;
+        document.getElementById('resumenEvento').innerHTML = `📅 ${new Date(eventInfo.fecha).toLocaleDateString('es-ES')} - ${eventInfo.horaInicio} a ${eventInfo.horaFin}`;
+        const ctx = document.getElementById('chartInscritos')?.getContext('2d');
+        if(ctx) {
+            new Chart(ctx, { type: 'doughnut', data: { labels: ['Confirmados', 'Pendientes'], datasets: [{ data: [presentes, total-presentes], backgroundColor: ['#16c784', '#e94560'] }] } });
+        }
     }
-
-    function renderEvento() {
-        return `<div class="section-card">
-            <div class="section-title"><i class="fas fa-calendar-alt"></i> Configuración del Evento</div>
-            <div class="form-group"><label>Descripción</label><textarea id="descEvento" rows="3">${eventInfo.descripcion}</textarea></div>
-            <div class="form-group"><label>Fecha</label><input type="date" id="fechaEvento" value="${eventInfo.fecha}"></div>
-            <div class="form-group"><label>Hora inicio</label><input type="time" id="horaInicio" value="${eventInfo.horaInicio}"></div>
-            <div class="form-group"><label>Hora fin</label><input type="time" id="horaFin" value="${eventInfo.horaFin}"></div>
-            <button class="btn" onclick="guardarEvento()">Guardar cambios</button>
-        </div>`;
+    
+    function cargarEventoAlFormulario() {
+        document.getElementById('descEvento').value = eventInfo.descripcion;
+        document.getElementById('fechaEvento').value = eventInfo.fecha;
+        document.getElementById('horaInicio').value = eventInfo.horaInicio;
+        document.getElementById('horaFin').value = eventInfo.horaFin;
     }
-
-    function exportarAgendaPDF() {
-        const fechaEvento = new Date(eventInfo.fecha).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
-        let tablaHTML = `
-            <div style="font-family: 'Inter', sans-serif; padding: 20px;">
-                <div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #0f3460; padding-bottom:10px;">
-                    <img src="assets/logo.png" style="height:60px;"><h2 style="color:#0f3460;">III SEMINARIO DE ACTUALIZACIÓN QUIRÚRGICA</h2>
-                    <p style="color:#e94560;">${fechaEvento} - ${eventInfo.horaInicio} a ${eventInfo.horaFin}</p>
-                </div>
-                <table style="width:100%; border-collapse:collapse;">
-                    <thead><tr style="background:#0f3460; color:white;"><th>Hora</th><th>Tema</th><th>Expositor</th></tr></thead>
-                    <tbody>${agenda.map(item => `<tr><td style="border:1px solid #ddd; padding:8px;">${item.hora}</td><td style="border:1px solid #ddd; padding:8px;">${item.tema}</td><td style="border:1px solid #ddd; padding:8px;">${item.speaker || '---'}</td></tr>`).join('')}</tbody>
-                </table>
-                <div style="text-align:center; margin-top:20px; font-size:0.8rem; color:#64748b;">Seminario USCA - ${fechaEvento}</div>
-            </div>
-        `;
-        const element = document.createElement('div');
-        element.innerHTML = tablaHTML;
-        document.body.appendChild(element);
-        html2pdf().set({ margin: [0.5,0.5,0.5,0.5], filename: `agenda_seminario_${eventInfo.fecha}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } }).from(element).save().then(() => element.remove());
+    
+    function actualizarListaAgenda() {
+        const container = document.getElementById('listaAgenda');
+        container.innerHTML = agenda.map(a => `
+            <div class="list-item"><div><strong>${a.hora}</strong> - ${a.tema}<br><small>${a.speaker||''}</small></div><button class="btn btn-sm btn-danger" onclick="eliminarActividad('${a.id}')">Eliminar</button></div>
+        `).join('');
     }
-
-    function renderAgenda() {
-        let html = `<div class="section-card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                <div class="section-title"><i class="fas fa-list-ul"></i> Agenda del Evento</div>
-                <button class="btn" onclick="exportarAgendaPDF()"><i class="fas fa-file-pdf"></i> Exportar agenda a PDF</button>
-            </div>
-            <div class="section-title"><i class="fas fa-plus-circle"></i> Agregar actividad</div>
-            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;">
-                <input type="time" id="nuevaHora" style="flex:1;">
-                <input type="text" id="nuevoTema" placeholder="Tema" style="flex:2;">
-                <input type="text" id="nuevoSpeaker" placeholder="Expositor" style="flex:2;">
-                <button class="btn" onclick="agregarActividad()">➕ Agregar</button>
-            </div>
-            <div class="section-title"><i class="fas fa-list"></i> Actividades actuales</div>
-            <div id="listaAgenda">`;
-        agenda.forEach(a => {
-            html += `<div class="list-item"><div><strong>${a.hora}</strong> - ${a.tema}<br><small>${a.speaker||''}</small></div><button class="btn btn-sm btn-danger" onclick="eliminarActividad('${a.id}')">Eliminar</button></div>`;
+    
+    function actualizarListaAuspiciantes() {
+        const container = document.getElementById('listaAuspiciantes');
+        container.innerHTML = auspiciantes.map(a => `
+            <div class="list-item"><div style="display:flex; align-items:center; gap:10px;">${a.imagen ? `<img src="${a.imagen}" style="height:40px; border-radius:8px;">` : '<i class="fas fa-building" style="font-size:1.8rem;"></i>'}<strong>${a.nombre}</strong></div><button class="btn btn-sm btn-danger" onclick="eliminarAuspiciante('${a.id}')">Eliminar</button></div>
+        `).join('');
+    }
+    
+    function resaltarPalabras(texto, busqueda) {
+        if (!busqueda.trim()) return texto;
+        const palabras = busqueda.trim().split(/\s+/);
+        let resultado = texto;
+        palabras.forEach(palabra => {
+            if (palabra.length === 0) return;
+            const escapado = palabra.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`(${escapado})`, 'gi');
+            resultado = resultado.replace(regex, `<span class="highlight">$1</span>`);
         });
-        html += `</div></div>`;
-        return html;
+        return resultado;
     }
-
-    function renderAuspiciantes() {
-        let html = `<div class="section-card">
-            <div class="section-title"><i class="fas fa-handshake"></i> Agregar auspiciante</div>
-            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;">
-                <input type="text" id="nombreAuspiciante" placeholder="Nombre" style="flex:2;">
-                <input type="file" id="imagenAuspiciante" accept="image/*" style="flex:2;">
-                <button class="btn" onclick="agregarAuspiciante()">➕ Agregar</button>
-            </div>
-            <div class="section-title"><i class="fas fa-building"></i> Auspiciantes actuales</div>
-            <div id="listaAuspiciantes">`;
-        auspiciantes.forEach(a => {
-            html += `<div class="list-item"><div style="display:flex; align-items:center; gap:10px;">${a.imagen ? `<img src="${a.imagen}" style="height:40px; border-radius:8px;">` : '<i class="fas fa-building" style="font-size:1.8rem;"></i>'}<strong>${a.nombre}</strong></div><button class="btn btn-sm btn-danger" onclick="eliminarAuspiciante('${a.id}')">Eliminar</button></div>`;
-        });
-        html += `</div></div>`;
-        return html;
+    
+    function textoNormalizadoSinEspacios(str) {
+        return str.toLowerCase().replace(/\s/g, '');
     }
-
+    
     function actualizarListaInscritos() {
         const container = document.getElementById('listaInscritosContainer');
         if (!container) return;
-        const term = searchTerm.trim().toLowerCase();
-        let filtrados = inscritos;
-        if (term !== '') {
-            filtrados = inscritos.filter(i => i.nombre.toLowerCase().includes(term) || i.apellido.toLowerCase().includes(term) || i.ci.toString().includes(term));
+        const termRaw = searchTerm.trim();
+        let inscritosFiltrados = inscritos;
+        if (termRaw !== '') {
+            const termNormalizado = textoNormalizadoSinEspacios(termRaw);
+            inscritosFiltrados = inscritos.filter(i => {
+                const nombreCompleto = `${i.nombre} ${i.apellido}`;
+                const nombreCompletoSinEspacios = textoNormalizadoSinEspacios(nombreCompleto);
+                const ciSinEspacios = textoNormalizadoSinEspacios(i.ci.toString());
+                return nombreCompletoSinEspacios.includes(termNormalizado) || ciSinEspacios.includes(termNormalizado);
+            });
         }
-        if (filtrados.length === 0) {
-            container.innerHTML = `<div class="no-results"><i class="fas fa-exclamation-triangle"></i> No se encontraron inscritos que coincidan con "<strong>${searchTerm}</strong>"</div>`;
+        if (inscritosFiltrados.length === 0) {
+            container.innerHTML = `<div class="no-results"><i class="fas fa-exclamation-triangle"></i> No se encontraron inscritos que coincidan con "<strong>${termRaw}</strong>"</div>`;
             return;
         }
         let html = '';
-        filtrados.forEach(i => {
+        inscritosFiltrados.forEach(i => {
+            let nombreResaltado = resaltarPalabras(i.nombre, searchTerm);
+            let apellidoResaltado = resaltarPalabras(i.apellido, searchTerm);
+            let ciResaltado = resaltarPalabras(i.ci.toString(), searchTerm);
             const imgPreview = i.comprobante ? `<img src="${i.comprobante}" class="img-thumb" onclick="verImagen('${i.comprobante}')">` : 'Sin imagen';
             html += `<div class="list-item">
                 <div class="inscrito-info">
-                    <strong>${i.nombre} ${i.apellido}</strong><br>CI: ${i.ci} | ${i.correo}
+                    <strong>${nombreResaltado} ${apellidoResaltado}</strong><br>
+                    CI: ${ciResaltado} | ${i.correo}
                     <div style="margin-top:5px;">${imgPreview}</div>
                 </div>
                 <div class="inscrito-actions">
-                    <button class="btn btn-sm ${i.pagoVerificado ? 'btn-warning' : 'btn-success'}" onclick="togglePago('${i.id}')">${i.pagoVerificado ? 'Quitar pago' : 'Validar pago'}</button>
-                    <button class="btn btn-sm ${i.presente ? 'btn-warning' : 'btn-success'}" onclick="toggleAsistencia('${i.id}')">${i.presente ? 'Quitar asistencia' : 'Marcar asistencia'}</button>
+                    <button class="btn btn-sm ${i.pagoVerificado ? 'btn-warning' : 'btn-success'}" onclick="togglePago('${i.id}')">
+                        ${i.pagoVerificado ? 'Quitar pago' : 'Validar pago'}
+                    </button>
+                    <button class="btn btn-sm ${i.presente ? 'btn-warning' : 'btn-success'}" onclick="toggleAsistencia('${i.id}')">
+                        ${i.presente ? 'Quitar asistencia' : 'Marcar asistencia'}
+                    </button>
                 </div>
             </div>`;
         });
         container.innerHTML = html;
     }
-
+    
+    window.buscarInscritos = function() {
+        const input = document.getElementById('searchInput');
+        searchTerm = input ? input.value : '';
+        actualizarListaInscritos();
+    };
+    window.limpiarBusqueda = function() {
+        searchTerm = '';
+        const input = document.getElementById('searchInput');
+        if (input) input.value = '';
+        actualizarListaInscritos();
+    };
+    
+    // ==================== RENDERIZAR SECCIONES (llamadas por cambiarSeccion) ====================
+    function renderDashboard() {
+        return `<div class="kpi-grid" id="kpiContainer"></div><div class="section-card"><div class="section-title"><i class="fas fa-info-circle"></i> Resumen del evento</div><p id="resumenEvento"></p><canvas id="chartInscritos" style="max-height:250px; margin-top:1rem;"></canvas></div>`;
+    }
+    function renderEvento() {
+        return `<div class="section-card"><div class="section-title"><i class="fas fa-calendar-alt"></i> Configuración del Evento</div><div class="form-group"><label>Descripción</label><textarea id="descEvento" rows="3"></textarea></div><div class="form-group"><label>Fecha</label><input type="date" id="fechaEvento"></div><div class="form-group"><label>Hora inicio</label><input type="time" id="horaInicio"></div><div class="form-group"><label>Hora fin</label><input type="time" id="horaFin"></div><button class="btn" onclick="guardarEvento()">Guardar cambios</button></div>`;
+    }
+    function renderAgenda() {
+        return `<div class="section-card"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;"><div class="section-title"><i class="fas fa-list-ul"></i> Agenda del Evento</div><button class="btn" onclick="exportarAgendaPDF()"><i class="fas fa-file-pdf"></i> Exportar agenda a PDF</button></div><div class="section-title"><i class="fas fa-plus-circle"></i> Agregar actividad</div><div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;"><input type="time" id="nuevaHora" style="flex:1;"><input type="text" id="nuevoTema" placeholder="Tema" style="flex:2;"><input type="text" id="nuevoSpeaker" placeholder="Expositor" style="flex:2;"><button class="btn" onclick="agregarActividad()">➕ Agregar</button></div><div class="section-title"><i class="fas fa-list"></i> Actividades actuales</div><div id="listaAgenda"></div></div>`;
+    }
+    function renderAuspiciantes() {
+        return `<div class="section-card"><div class="section-title"><i class="fas fa-handshake"></i> Agregar auspiciante</div><div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;"><input type="text" id="nombreAuspiciante" placeholder="Nombre" style="flex:2;"><input type="file" id="imagenAuspiciante" accept="image/*" style="flex:2;"><button class="btn" onclick="agregarAuspiciante()">➕ Agregar</button></div><div class="section-title"><i class="fas fa-building"></i> Auspiciantes actuales</div><div id="listaAuspiciantes"></div></div>`;
+    }
     function renderInscritos() {
-        return `<div class="section-card">
-            <div class="section-title"><i class="fas fa-users"></i> Lista de inscritos</div>
-            <div class="search-container">
-                <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar por nombre, apellido o cédula" onkeyup="buscarInscritos()" value="${searchTerm}">
-                <button class="btn" onclick="buscarInscritos()"><i class="fas fa-search"></i> Buscar</button>
-                <button class="btn" style="background:#64748b;" onclick="limpiarBusqueda()"><i class="fas fa-times"></i> Limpiar</button>
-                <button class="btn" onclick="exportarExcel()"><i class="fas fa-file-excel"></i> Exportar</button>
-            </div>
-            <div id="listaInscritosContainer"></div>
-        </div>`;
+        return `<div class="section-card"><div class="section-title"><i class="fas fa-users"></i> Lista de inscritos</div><div class="search-container"><input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar por nombre, apellido o cédula (ignora espacios)" onkeyup="buscarInscritos()"><button class="btn" onclick="buscarInscritos()"><i class="fas fa-search"></i> Buscar</button><button class="btn" style="background:#64748b;" onclick="limpiarBusqueda()"><i class="fas fa-times"></i> Limpiar</button><button class="btn" onclick="exportarExcel()"><i class="fas fa-file-excel"></i> Exportar</button></div><div id="listaInscritosContainer"></div></div>`;
     }
-
     function renderScanner() {
-        return `<div class="section-card">
-            <div class="section-title"><i class="fas fa-qrcode"></i> Escáner QR</div>
-            <p>Acerca el código QR del carnet para cambiar asistencia (toggle).</p>
-            <div class="scanner-container">
-                <video id="scannerVideo" playsinline></video>
-                <div style="margin-top:1rem;">
-                    <button class="btn" id="btnIniciar" onclick="iniciarEscaner()"><i class="fas fa-video"></i> Iniciar cámara</button>
-                    <button class="btn btn-danger" id="btnDetener" onclick="detenerEscaner()" style="display:none;"><i class="fas fa-stop"></i> Detener</button>
-                </div>
-                <div id="scannerResultado" style="margin-top:1rem;"></div>
-            </div>
-        </div>`;
+        return `<div class="section-card"><div class="section-title"><i class="fas fa-qrcode"></i> Escáner QR</div><p>Acerca el código QR del carnet para cambiar asistencia (toggle).</p><div class="scanner-container"><video id="scannerVideo" playsinline></video><div style="margin-top:1rem;"><button class="btn" id="btnIniciar" onclick="iniciarEscaner()"><i class="fas fa-video"></i> Iniciar cámara</button><button class="btn btn-danger" id="btnDetener" onclick="detenerEscaner()" style="display:none;"><i class="fas fa-stop"></i> Detener</button></div><div id="scannerResultado" style="margin-top:1rem;"></div></div></div>`;
     }
-
-    // ==================== CRUD ====================
+    
+    function exportarAgendaPDF() {
+        const fechaEvento = new Date(eventInfo.fecha).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+        let tablaHTML = `<div class="pdf-agenda" style="font-family: 'Inter', sans-serif; padding: 20px;"><div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #0f3460; padding-bottom:10px;"><img src="assets/logo.png" style="height:60px;"><h2 style="color:#0f3460;">III SEMINARIO DE ACTUALIZACIÓN QUIRÚRGICA</h2><p style="color:#e94560;">${fechaEvento} - ${eventInfo.horaInicio} a ${eventInfo.horaFin}</p></div><table style="width:100%; border-collapse:collapse;"><thead><tr style="background:#0f3460; color:white;"><th>Hora</th><th>Tema</th><th>Expositor</th></tr></thead><tbody>${agenda.map(item => `<tr><td style="border:1px solid #ddd; padding:8px;">${item.hora}</td><td style="border:1px solid #ddd; padding:8px;">${item.tema}</td><td style="border:1px solid #ddd; padding:8px;">${item.speaker || '---'}</td></tr>`).join('')}</tbody></table><div style="text-align:center; margin-top:20px; font-size:0.8rem; color:#64748b;">Seminario USCA - ${fechaEvento}</div></div>`;
+        const element = document.createElement('div');
+        element.innerHTML = tablaHTML;
+        document.body.appendChild(element);
+        html2pdf().set({ margin: [0.5,0.5,0.5,0.5], filename: `agenda_seminario_${eventInfo.fecha}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } }).from(element).save().then(() => element.remove());
+    }
+    window.exportarAgendaPDF = exportarAgendaPDF;
+    
+    // ==================== CRUD CON FIREBASE ====================
     window.guardarEvento = function() {
         eventInfo.descripcion = document.getElementById('descEvento').value;
         eventInfo.fecha = document.getElementById('fechaEvento').value;
         eventInfo.horaInicio = document.getElementById('horaInicio').value;
         eventInfo.horaFin = document.getElementById('horaFin').value;
-        guardarDatos();
-        alert("Evento actualizado");
-        cambiarSeccion('dashboard');
+        db.ref('evento').set(eventInfo).then(() => {
+            alert("Evento actualizado");
+            cambiarSeccion('dashboard');
+        }).catch(err => alert("Error: " + err.message));
     };
+    
     window.agregarActividad = function() {
         let hora = document.getElementById('nuevaHora').value, tema = document.getElementById('nuevoTema').value;
         if(!hora || !tema) { alert("Completa hora y tema"); return; }
-        agenda.push({ id: Date.now().toString(), hora, tema, speaker: document.getElementById('nuevoSpeaker').value });
-        guardarDatos();
-        cambiarSeccion('agenda');
+        const speaker = document.getElementById('nuevoSpeaker').value;
+        const newId = Date.now().toString();
+        db.ref('agenda/' + newId).set({ id: newId, hora, tema, speaker }).then(() => {
+            cambiarSeccion('agenda');
+        }).catch(err => alert("Error: " + err.message));
     };
+    
     window.eliminarActividad = function(id) {
-        agenda = agenda.filter(a => a.id !== id);
-        guardarDatos();
-        cambiarSeccion('agenda');
+        db.ref('agenda/' + id).remove().then(() => {
+            cambiarSeccion('agenda');
+        }).catch(err => alert("Error: " + err.message));
     };
+    
     window.agregarAuspiciante = function() {
         let nombre = document.getElementById('nombreAuspiciante').value.trim();
         if(!nombre) { alert("Ingrese nombre"); return; }
         let file = document.getElementById('imagenAuspiciante').files[0];
-        let reader = new FileReader();
+        const newId = Date.now().toString();
+        const reader = new FileReader();
         reader.onload = e => {
-            auspiciantes.push({ id: Date.now().toString(), nombre, imagen: e.target.result });
-            guardarDatos();
-            cambiarSeccion('auspiciantes');
+            db.ref('auspiciantes/' + newId).set({ id: newId, nombre, imagen: e.target.result }).then(() => {
+                cambiarSeccion('auspiciantes');
+            }).catch(err => alert("Error: " + err.message));
         };
         if(file) reader.readAsDataURL(file);
-        else { auspiciantes.push({ id: Date.now().toString(), nombre, imagen: null }); guardarDatos(); cambiarSeccion('auspiciantes'); }
+        else {
+            db.ref('auspiciantes/' + newId).set({ id: newId, nombre, imagen: null }).then(() => {
+                cambiarSeccion('auspiciantes');
+            }).catch(err => alert("Error: " + err.message));
+        }
         document.getElementById('nombreAuspiciante').value = '';
         document.getElementById('imagenAuspiciante').value = '';
     };
+    
     window.eliminarAuspiciante = function(id) {
-        auspiciantes = auspiciantes.filter(a => a.id !== id);
-        guardarDatos();
-        cambiarSeccion('auspiciantes');
+        db.ref('auspiciantes/' + id).remove().then(() => {
+            cambiarSeccion('auspiciantes');
+        }).catch(err => alert("Error: " + err.message));
     };
-    window.exportarExcel = function() {
+    
+    window.togglePago = function(id) {
+        const ref = db.ref('inscritos/' + id);
+        ref.once('value').then(snap => {
+            const inscrito = snap.val();
+            if(inscrito) {
+                inscrito.pagoVerificado = !inscrito.pagoVerificado;
+                ref.set(inscrito).then(() => {
+                    cambiarSeccion('inscritos');
+                });
+            }
+        });
+    };
+    
+    window.toggleAsistencia = function(id) {
+        const ref = db.ref('inscritos/' + id);
+        ref.once('value').then(snap => {
+            const inscrito = snap.val();
+            if(inscrito) {
+                inscrito.presente = !inscrito.presente;
+                ref.set(inscrito).then(() => {
+                    cambiarSeccion('inscritos');
+                });
+            }
+        });
+    };
+    
+    window.verImagen = function(base64) {
+        document.getElementById('imgGrande').src = base64;
+        document.getElementById('modalImagen').classList.add('active');
+    };
+    window.cerrarModalImagen = function() {
+        document.getElementById('modalImagen').classList.remove('active');
+    };
+    
+    function exportarExcel() {
         let csv = "Nombre,Cédula,Email,Pago verificado,Asistencia\n";
         inscritos.forEach(i => {
             csv += `"${i.nombre} ${i.apellido}","${i.ci}","${i.correo}","${i.pagoVerificado ? 'Sí' : 'No'}","${i.presente ? 'Presente' : 'Ausente'}"\n`;
@@ -277,21 +353,23 @@
         link.download = "inscritos.csv";
         link.click();
         URL.revokeObjectURL(link.href);
-    };
-    window.verImagen = function(base64) { document.getElementById('imgGrande').src = base64; document.getElementById('modalImagen').classList.add('active'); };
-    window.cerrarModalImagen = function() { document.getElementById('modalImagen').classList.remove('active'); };
-
-    // ==================== ESCÁNER QR ====================
+    }
+    window.exportarExcel = exportarExcel;
+    
+    // ==================== ESCÁNER QR (con toggle en Firebase) ====================
     window.iniciarEscaner = function() {
         let video = document.getElementById('scannerVideo');
         navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(stream => {
-            scannerStream = stream; video.srcObject = stream; video.play();
+            scannerStream = stream;
+            video.srcObject = stream;
+            video.play();
             document.getElementById('btnIniciar').style.display = 'none';
             document.getElementById('btnDetener').style.display = 'inline-block';
             scannerActive = true;
             escanearQR();
         }).catch(err => alert("Error cámara: " + err.message));
     };
+    
     window.detenerEscaner = function() {
         scannerActive = false;
         if(scannerAnimation) cancelAnimationFrame(scannerAnimation);
@@ -301,6 +379,7 @@
         document.getElementById('btnIniciar').style.display = 'inline-block';
         document.getElementById('btnDetener').style.display = 'none';
     };
+    
     function escanearQR() {
         if(!scannerActive) return;
         let video = document.getElementById('scannerVideo');
@@ -317,11 +396,12 @@
             let resultadoDiv = document.getElementById('scannerResultado');
             if(inscrito) {
                 inscrito.presente = !inscrito.presente;
-                guardarDatos();
-                resultadoDiv.innerHTML = `<span style="color:green;">✅ Asistencia cambiada a ${inscrito.presente ? 'Presente' : 'Ausente'} para ${inscrito.nombre}</span>`;
-                setTimeout(() => resultadoDiv.innerHTML = '', 3000);
-                detenerEscaner();
-                if(document.querySelector('.nav-item[data-tab="inscritos"]').classList.contains('active')) actualizarListaInscritos();
+                db.ref('inscritos/' + inscrito.id).set(inscrito).then(() => {
+                    resultadoDiv.innerHTML = `<span style="color:green;">✅ Asistencia cambiada a ${inscrito.presente ? 'Presente' : 'Ausente'} para ${inscrito.nombre}</span>`;
+                    setTimeout(() => resultadoDiv.innerHTML = '', 3000);
+                    detenerEscaner();
+                    if(document.getElementById('listaInscritosContainer')) actualizarListaInscritos();
+                });
             } else {
                 resultadoDiv.innerHTML = `<span style="color:red;">❌ Código no válido</span>`;
                 setTimeout(() => resultadoDiv.innerHTML = '', 2000);
@@ -330,47 +410,36 @@
         }
         scannerAnimation = requestAnimationFrame(escanearQR);
     }
-
+    
     // ==================== NAVEGACIÓN ====================
-    window.buscarInscritos = function() {
-        const input = document.getElementById('searchInput');
-        searchTerm = input ? input.value : '';
-        actualizarListaInscritos();
-    };
-    window.limpiarBusqueda = function() {
-        searchTerm = '';
-        const input = document.getElementById('searchInput');
-        if (input) input.value = '';
-        actualizarListaInscritos();
-    };
-
     function cambiarSeccion(seccion) {
         let content = document.getElementById('mainContent');
         if(seccion === 'dashboard') {
             content.innerHTML = renderDashboard();
-            setTimeout(() => {
-                let ctx = document.getElementById('chartInscritos')?.getContext('2d');
-                if(ctx) {
-                    let presentes = inscritos.filter(i=>i.presente).length;
-                    new Chart(ctx, { type: 'doughnut', data: { labels: ['Confirmados', 'Pendientes'], datasets: [{ data: [presentes, inscritos.length - presentes], backgroundColor: ['#16c784', '#e94560'] }] } });
-                }
-            }, 50);
-        } else if(seccion === 'evento') content.innerHTML = renderEvento();
-        else if(seccion === 'agenda') content.innerHTML = renderAgenda();
-        else if(seccion === 'auspiciantes') content.innerHTML = renderAuspiciantes();
-        else if(seccion === 'inscritos') {
+            setTimeout(() => actualizarDashboard(), 50);
+        } else if(seccion === 'evento') {
+            content.innerHTML = renderEvento();
+            cargarEventoAlFormulario();
+        } else if(seccion === 'agenda') {
+            content.innerHTML = renderAgenda();
+            actualizarListaAgenda();
+        } else if(seccion === 'auspiciantes') {
+            content.innerHTML = renderAuspiciantes();
+            actualizarListaAuspiciantes();
+        } else if(seccion === 'inscritos') {
             content.innerHTML = renderInscritos();
             actualizarListaInscritos();
+        } else if(seccion === 'scanner') {
+            content.innerHTML = renderScanner();
         }
-        else if(seccion === 'scanner') content.innerHTML = renderScanner();
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
         document.querySelector(`.nav-item[data-tab="${seccion}"]`).classList.add('active');
         if(seccion !== 'scanner') detenerEscaner();
     }
-
-    // ==================== LOGIN ====================
+    
+    // ==================== LOGIN / LOGOUT ====================
     window.verificarLogin = function() {
-        let pass = document.getElementById('adminPassword').value;
+        const pass = document.getElementById('adminPassword').value;
         if(pass === 'usca2026') {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('adminPanel').classList.add('active');
@@ -380,6 +449,7 @@
             document.getElementById('loginError').innerText = '❌ Contraseña incorrecta';
         }
     };
+    
     window.cerrarSesion = function() {
         detenerEscaner();
         document.getElementById('adminPanel').classList.remove('active');
@@ -387,8 +457,9 @@
         document.getElementById('adminPassword').value = '';
         document.getElementById('loginError').innerText = '';
     };
-
-    // Eventos del sidebar
+    
+    window.cambiarSeccion = cambiarSeccion;
+    
     document.querySelectorAll('.nav-item').forEach(el => {
         el.addEventListener('click', () => cambiarSeccion(el.getAttribute('data-tab')));
     });
