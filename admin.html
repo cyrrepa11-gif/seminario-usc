@@ -47,6 +47,11 @@
             background: #0f3460;
             margin-top: 1rem;
         }
+        /* Centrar QR */
+        #carnetQRAdmin {
+            display: flex;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
@@ -214,21 +219,30 @@
         return str.toLowerCase().replace(/\s/g, '');
     }
     
-    // ---- NUEVAS FUNCIONES PARA CARNET Y ELIMINAR ----
+    // ---- FUNCIÓN MODIFICADA DEL CARNET PARA ADMIN ----
     function mostrarCarnetAdmin(nombreCompleto, ci, qrData) {
         const container = document.getElementById('carnetAdminContent');
         container.innerHTML = `
             <div class="carnet">
-                <div class="carnet-header"><img src="assets/logo.png" style="height: 40px; margin-right: 10px;"> III SEMINARIO USCA</div>
-                <div class="carnet-nombre">${nombreCompleto.toUpperCase()}</div>
+                <div class="carnet-header" style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px;">
+                    <img src="assets/logo.png" style="height: 60px; width: auto;">
+                    <div style="font-size: 1.1rem; font-weight: 700; line-height: 1.2;">III Seminario de<br>Actualización Quirúrgica</div>
+                </div>
+                <div class="carnet-nombre" style="font-size: 1.3rem; font-weight: 800; margin: 15px 0 5px;">${nombreCompleto.toUpperCase()}</div>
                 <div class="carnet-ci">CI: ${ci}</div>
-                <div id="carnetQRAdmin"></div>
-                <div class="carnet-footer">${new Date(eventInfo.fecha).toLocaleDateString('es-ES')}</div>
+                <div id="carnetQRAdmin" style="display: flex; justify-content: center; margin: 15px auto;"></div>
+                <div class="carnet-footer" style="margin-top: 10px; font-size: 0.9rem;">Caaguazú 2026</div>
             </div>
         `;
         const qrDiv = document.getElementById('carnetQRAdmin');
         qrDiv.innerHTML = '';
-        new QRCode(qrDiv, { text: qrData, width: 150, height: 150, colorDark: "#0f3460", colorLight: "#ffffff" });
+        new QRCode(qrDiv, {
+            text: qrData,
+            width: 120,
+            height: 120,
+            colorDark: "#0f3460",
+            colorLight: "#ffffff"
+        });
         document.getElementById('modalCarnetAdmin').classList.add('active');
     }
     
@@ -244,9 +258,10 @@
             <style>
                 body { font-family: 'Poppins', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f0f4f8; }
                 .carnet { background: linear-gradient(135deg, #0f3460 0%, #1a4d7a 100%); color: white; padding: 1.5rem; border-radius: 16px; text-align: center; width: 400px; margin: auto; }
-                .carnet-header { font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+                .carnet-header { display: flex; align-items: center; justify-content: center; gap: 10px; }
                 .carnet-nombre { font-size: 1.3rem; font-weight: 800; margin: 0.5rem 0; }
                 img { max-width: 100%; }
+                #carnetQRAdmin { display: flex; justify-content: center; }
             </style>
             </head><body>
             ${carnetHTML.outerHTML}
