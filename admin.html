@@ -16,50 +16,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
-        /* Estilos responsive (los mismos que antes, pero añadimos soporte para tabs de días) */
-        .dias-tabs {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-            border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 0.5rem;
+        /* Estilos responsive y mejoras */
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f1f5f9;
+            color: #2c3e50;
         }
-        .dia-tab {
-            background: transparent;
-            border: none;
-            padding: 0.5rem 1rem;
-            cursor: pointer;
-            font-weight: 600;
-            color: #64748b;
-            border-radius: 30px;
-            transition: all 0.2s;
-        }
-        .dia-tab.active {
-            background: #0f3460;
-            color: white;
-        }
-        .form-agregar {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-            margin-bottom: 1rem;
-        }
-        .form-agregar input, .form-agregar select {
-            flex: 1;
-            min-width: 120px;
-        }
-        @media (max-width: 768px) {
-            .form-agregar {
-                flex-direction: column;
-            }
-            .form-agregar input, .form-agregar select, .form-agregar button {
-                width: 100%;
-            }
-            .dias-tabs {
-                justify-content: center;
-            }
-        }
-        /* Resto de estilos se mantienen */
+        /* Pantalla de login */
         .login-container {
             display: flex;
             align-items: center;
@@ -74,10 +38,12 @@
             width: 90%;
             max-width: 400px;
             text-align: center;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.2);
         }
         .login-card h2 {
             color: #0f3460;
             font-family: 'Playfair Display', serif;
+            margin-bottom: 1rem;
         }
         .login-card input {
             width: 100%;
@@ -100,6 +66,7 @@
             color: #e94560;
             margin-top: 0.5rem;
         }
+        /* Panel Admin */
         .admin-panel {
             display: none;
             height: 100vh;
@@ -141,9 +108,10 @@
             background: #e94560;
             border: none;
             color: white;
-            padding: 0.3rem 0.8rem;
+            padding: 0.4rem 1rem;
             border-radius: 30px;
             cursor: pointer;
+            font-weight: 500;
         }
         .admin-layout {
             display: flex;
@@ -169,9 +137,16 @@
             margin: 0.2rem 0.5rem;
             border-radius: 10px;
         }
+        .nav-item i {
+            width: 24px;
+            font-size: 1rem;
+        }
         .nav-item.active {
             background: #0f3460;
             color: white;
+        }
+        .nav-item:hover:not(.active) {
+            background: #f1f5f9;
         }
         .main-content {
             flex: 1;
@@ -179,7 +154,7 @@
             padding: 1rem;
             background: #f1f5f9;
         }
-        /* Resto de estilos (kpi, listas, etc.) se mantienen */
+        /* Tarjetas KPI */
         .kpi-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -234,6 +209,7 @@
             border-radius: 30px;
             cursor: pointer;
             font-weight: 500;
+            font-size: 0.8rem;
         }
         .btn-sm {
             padding: 0.2rem 0.6rem;
@@ -254,6 +230,15 @@
             gap: 0.5rem;
             border-left: 4px solid #e94560;
         }
+        .inscrito-info {
+            flex: 2;
+            min-width: 150px;
+        }
+        .inscrito-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
         .img-thumb {
             width: 30px;
             height: 30px;
@@ -264,11 +249,15 @@
         .highlight {
             background-color: #fef08a;
         }
-        .search-container {
+        .search-container, .filtros-container {
             display: flex;
             gap: 0.5rem;
             flex-wrap: wrap;
             margin-bottom: 1rem;
+        }
+        .filtros-container select, .filtros-container input {
+            flex: 1;
+            min-width: 120px;
         }
         #scannerVideo {
             width: 100%;
@@ -329,12 +318,54 @@
             .kpi-grid {
                 grid-template-columns: 1fr;
             }
-            .search-container {
+            .search-container, .filtros-container {
                 flex-direction: column;
             }
             .list-item {
                 flex-direction: column;
                 align-items: stretch;
+            }
+            .inscrito-actions {
+                justify-content: flex-end;
+            }
+        }
+        /* Pestañas días */
+        .dias-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 0.5rem;
+        }
+        .dia-tab {
+            background: transparent;
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            color: #64748b;
+            border-radius: 30px;
+        }
+        .dia-tab.active {
+            background: #0f3460;
+            color: white;
+        }
+        .form-agregar {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        .form-agregar input, .form-agregar select {
+            flex: 1;
+            min-width: 120px;
+        }
+        @media (max-width: 768px) {
+            .form-agregar {
+                flex-direction: column;
+            }
+            .form-agregar input, .form-agregar button {
+                width: 100%;
             }
         }
     </style>
@@ -399,12 +430,10 @@
         messagingSenderId: "560733409147",
         appId: "1:560733409147:web:13f01f10f3ee961ab677de"
     };
-    
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    
-    // ==================== VARIABLES GLOBALES ====================
-    let agenda = [];        // cada elemento: { id, dia, hora, tema, speaker }
+        // ==================== VARIABLES GLOBALES ====================
+    let agenda = [];            // { id, dia, hora, tema, speaker }
     let auspiciantes = [];
     let inscritos = [];
     let eventInfo = { 
@@ -417,9 +446,10 @@
     };
     let scannerActive = false, scannerStream = null, scannerAnimation = null;
     let searchTerm = '';
-    let currentDia = 1;     // 1 o 2 para la agenda
-    
-    // ==================== SESIÓN ====================
+    let filtros = { facultad: '', carrera: '', semestreAnio: '' };
+    let currentDiaAdmin = 1;
+
+    // ==================== SESIÓN (persistente) ====================
     function checkSession() {
         if (sessionStorage.getItem('adminLogged') === 'true') {
             document.getElementById('loginScreen').style.display = 'none';
@@ -431,8 +461,8 @@
             document.getElementById('adminPanel').classList.remove('active');
         }
     }
-    
-    // ==================== CARGA DE DATOS ====================
+
+    // ==================== CARGA DE DATOS EN TIEMPO REAL ====================
     function cargarDatos() {
         db.ref('agenda').on('value', snap => {
             const data = snap.val();
@@ -468,23 +498,31 @@
             if (document.getElementById('chartInscritos')) actualizarDashboard();
         });
     }
-    
-    // ==================== VISTA DASHBOARD ====================
+
+    // ==================== DASHBOARD ====================
     function actualizarDashboard() {
         const total = inscritos.length;
-        const pagos = inscritos.filter(i=>i.pagoVerificado).length;
-        const presentes = inscritos.filter(i=>i.presente).length;
+        const pagos = inscritos.filter(i => i.pagoVerificado).length;
+        const presentes = inscritos.filter(i => i.presente).length;
         document.getElementById('kpiContainer').innerHTML = `
             <div class="kpi-card"><div><div class="kpi-number">${total}</div><div>Inscritos</div></div><i class="fas fa-users"></i></div>
             <div class="kpi-card"><div><div class="kpi-number">${pagos}</div><div>Pagos OK</div></div><i class="fas fa-credit-card"></i></div>
             <div class="kpi-card"><div><div class="kpi-number">${presentes}</div><div>Asistencia</div></div><i class="fas fa-check-circle"></i></div>
             <div class="kpi-card"><div><div class="kpi-number">${agenda.length}</div><div>Actividades</div></div><i class="fas fa-calendar"></i></div>
         `;
-        document.getElementById('resumenEvento').innerHTML = `📅 ${new Date(eventInfo.fechaInicio).toLocaleDateString('es-ES')} - ${new Date(eventInfo.fechaFin).toLocaleDateString('es-ES')} | ${eventInfo.horaInicio} a ${eventInfo.horaFin}<br>📍 ${eventInfo.ubicacion}`;
+        const fechaInicio = new Date(eventInfo.fechaInicio).toLocaleDateString('es-ES');
+        const fechaFin = new Date(eventInfo.fechaFin).toLocaleDateString('es-ES');
+        document.getElementById('resumenEvento').innerHTML = `📅 ${fechaInicio} - ${fechaFin} | ${eventInfo.horaInicio} a ${eventInfo.horaFin}<br>📍 ${eventInfo.ubicacion}`;
         const ctx = document.getElementById('chartInscritos')?.getContext('2d');
-        if(ctx) new Chart(ctx, { type: 'doughnut', data: { labels: ['Confirmados','Pendientes'], datasets: [{ data: [presentes, total-presentes], backgroundColor: ['#16c784','#e94560'] }] } });
+        if (ctx) {
+            new Chart(ctx, { 
+                type: 'doughnut', 
+                data: { labels: ['Confirmados', 'Pendientes'], datasets: [{ data: [presentes, total - presentes], backgroundColor: ['#16c784', '#e94560'] }] } 
+            });
+        }
     }
-    
+
+    // ==================== EVENTO ====================
     function cargarEventoAlFormulario() {
         document.getElementById('descEvento').value = eventInfo.descripcion;
         document.getElementById('fechaInicio').value = eventInfo.fechaInicio;
@@ -493,7 +531,7 @@
         document.getElementById('horaFin').value = eventInfo.horaFin;
         document.getElementById('ubicacion').value = eventInfo.ubicacion || "USCA";
     }
-    
+
     function guardarEvento() {
         eventInfo.descripcion = document.getElementById('descEvento').value;
         eventInfo.fechaInicio = document.getElementById('fechaInicio').value;
@@ -501,14 +539,14 @@
         eventInfo.horaInicio = document.getElementById('horaInicio').value;
         eventInfo.horaFin = document.getElementById('horaFin').value;
         eventInfo.ubicacion = document.getElementById('ubicacion').value;
-        db.ref('evento').set(eventInfo).then(() => alert("Evento actualizado")).catch(e => alert("Error: "+e.message));
+        db.ref('evento').set(eventInfo).then(() => alert("Evento actualizado")).catch(e => alert("Error: " + e.message));
         cambiarSeccion('dashboard');
     }
-    
-    // ==================== AGENDA CON DÍAS Y ORDEN ====================
+
+    // ==================== AGENDA (2 días, ordenada) ====================
     function actualizarListaAgenda() {
         const container = document.getElementById('listaAgenda');
-        const agendaDia = agenda.filter(item => item.dia == currentDia).sort((a,b) => a.hora.localeCompare(b.hora));
+        const agendaDia = agenda.filter(item => item.dia == currentDiaAdmin).sort((a, b) => a.hora.localeCompare(b.hora));
         if (agendaDia.length === 0) {
             container.innerHTML = '<p>No hay actividades para este día.</p>';
             return;
@@ -520,37 +558,33 @@
             </div>
         `).join('');
     }
-    
+
     function agregarActividad() {
         let hora = document.getElementById('nuevaHora').value;
         let tema = document.getElementById('nuevoTema').value.trim();
         let speaker = document.getElementById('nuevoSpeaker').value.trim();
         if (!hora || !tema) { alert("Completa hora y tema"); return; }
         const newId = Date.now().toString();
-        const nuevaActividad = { id: newId, dia: currentDia, hora, tema, speaker };
-        // Guardar en Firebase
-        db.ref('agenda/' + newId).set(nuevaActividad).then(() => {
-            // Limpiar campos
-            document.getElementById('nuevaHora').value = '';
-            document.getElementById('nuevoTema').value = '';
-            document.getElementById('nuevoSpeaker').value = '';
-            cambiarSeccion('agenda'); // refresca
-        }).catch(err => alert("Error: " + err.message));
+        db.ref('agenda/' + newId).set({ id: newId, dia: currentDiaAdmin, hora, tema, speaker })
+            .then(() => {
+                document.getElementById('nuevaHora').value = '';
+                document.getElementById('nuevoTema').value = '';
+                document.getElementById('nuevoSpeaker').value = '';
+                cambiarSeccion('agenda');
+            }).catch(err => alert("Error: " + err.message));
     }
-    
+
     function eliminarActividad(id) {
-        if (confirm("¿Eliminar esta actividad?")) {
-            db.ref('agenda/' + id).remove().then(() => cambiarSeccion('agenda'));
-        }
+        if (confirm("¿Eliminar esta actividad?")) db.ref('agenda/' + id).remove().then(() => cambiarSeccion('agenda'));
     }
-    
-    function cambiarDia(dia) {
-        currentDia = dia;
+
+    function cambiarDiaAdmin(dia) {
+        currentDiaAdmin = dia;
         document.querySelectorAll('.dia-tab').forEach(tab => tab.classList.remove('active'));
         document.getElementById(`tabDia${dia}`).classList.add('active');
         actualizarListaAgenda();
     }
-    
+
     // ==================== AUSPICIANTES ====================
     function actualizarListaAuspiciantes() {
         const container = document.getElementById('listaAuspiciantes');
@@ -564,67 +598,75 @@
             </div>
         `).join('');
     }
-    
+
     function agregarAuspiciante() {
         let nombre = document.getElementById('nombreAuspiciante').value.trim();
         if (!nombre) { alert("Ingrese nombre"); return; }
         const file = document.getElementById('imagenAuspiciante').files[0];
         const newId = Date.now().toString();
+        const setData = (img) => {
+            db.ref('auspiciantes/' + newId).set({ id: newId, nombre, imagen: img || null })
+                .then(() => cambiarSeccion('auspiciantes'))
+                .catch(err => alert("Error: " + err.message));
+        };
         if (file) {
             const reader = new FileReader();
-            reader.onload = e => {
-                db.ref('auspiciantes/' + newId).set({ id: newId, nombre, imagen: e.target.result }).then(() => cambiarSeccion('auspiciantes'));
-            };
+            reader.onload = e => setData(e.target.result);
             reader.readAsDataURL(file);
         } else {
-            db.ref('auspiciantes/' + newId).set({ id: newId, nombre, imagen: null }).then(() => cambiarSeccion('auspiciantes'));
+            setData(null);
         }
         document.getElementById('nombreAuspiciante').value = '';
         document.getElementById('imagenAuspiciante').value = '';
     }
-    
+
     function eliminarAuspiciante(id) {
         if (confirm("¿Eliminar auspiciante?")) db.ref('auspiciantes/' + id).remove().then(() => cambiarSeccion('auspiciantes'));
     }
-    
-    // ==================== INSCRITOS ====================
-    function resaltarPalabras(texto, busqueda) {
-        if (!busqueda.trim()) return texto;
-        const palabras = busqueda.trim().split(/\s+/);
-        let resultado = texto;
-        palabras.forEach(palabra => {
-            const regex = new RegExp(`(${palabra.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-            resultado = resultado.replace(regex, `<span class="highlight">$1</span>`);
-        });
-        return resultado;
+
+    // ==================== INSCRITOS (con filtros y orden) ====================
+    function aplicarFiltros() {
+        filtros.facultad = document.getElementById('filtroFacultad').value;
+        filtros.carrera = document.getElementById('filtroCarrera').value;
+        filtros.semestreAnio = document.getElementById('filtroSemestre').value;
+        actualizarListaInscritos();
     }
-    
+
     function actualizarListaInscritos() {
         const container = document.getElementById('listaInscritosContainer');
         if (!container) return;
-        let filtrados = inscritos;
+
+        let filtrados = [...inscritos];
+        // Filtro por búsqueda
         const term = searchTerm.trim().toLowerCase();
         if (term) {
-            filtrados = inscritos.filter(i => 
+            filtrados = filtrados.filter(i => 
                 i.nombre.toLowerCase().includes(term) || 
                 i.apellido.toLowerCase().includes(term) || 
                 i.ci.toString().includes(term)
             );
         }
+        // Filtros adicionales
+        if (filtros.facultad) filtrados = filtrados.filter(i => i.facultad === filtros.facultad);
+        if (filtros.carrera) filtrados = filtrados.filter(i => i.carrera === filtros.carrera);
+        if (filtros.semestreAnio) filtrados = filtrados.filter(i => i.semestreAnio == filtros.semestreAnio);
+
+        // Ordenar alfabéticamente por nombre
+        filtrados.sort((a, b) => `${a.nombre} ${a.apellido}`.localeCompare(`${b.nombre} ${b.apellido}`));
+
         if (filtrados.length === 0) {
-            container.innerHTML = `<div class="no-results">No se encontraron inscritos</div>`;
+            container.innerHTML = '<div class="no-results">No se encontraron inscritos</div>';
             return;
         }
+
         let html = '';
         filtrados.forEach(i => {
-            const nombreRes = resaltarPalabras(i.nombre, searchTerm);
-            const apellidoRes = resaltarPalabras(i.apellido, searchTerm);
-            const ciRes = resaltarPalabras(i.ci.toString(), searchTerm);
             html += `
                 <div class="list-item">
                     <div class="inscrito-info">
-                        <strong>${nombreRes} ${apellidoRes}</strong><br>
-                        CI: ${ciRes} | ${i.correo}
+                        <strong>${i.nombre} ${i.apellido}</strong><br>
+                        CI: ${i.ci} | ${i.correo}<br>
+                        <small>🎓 ${i.facultad || 'No especificada'} - ${i.carrera || 'No especificada'} - ${i.semestreAnio ? (i.carrera === 'Medicina' ? 'Semestre' : 'Año') + ' ' + i.semestreAnio : ''}</small>
                         ${i.comprobante ? `<img src="${i.comprobante}" class="img-thumb" onclick="verImagen('${i.comprobante}')">` : ''}
                     </div>
                     <div class="inscrito-actions">
@@ -646,7 +688,7 @@
         });
         container.innerHTML = html;
     }
-    
+
     function togglePago(id) {
         const ref = db.ref('inscritos/' + id);
         ref.once('value').then(snap => {
@@ -657,7 +699,7 @@
             }
         });
     }
-    
+
     function toggleAsistencia(id) {
         const ref = db.ref('inscritos/' + id);
         ref.once('value').then(snap => {
@@ -668,7 +710,7 @@
             }
         });
     }
-    
+
     function eliminarInscrito(id, nombre) {
         if (confirm(`¿Eliminar a ${nombre}?`)) {
             const pass = prompt("Contraseña de eliminación (2000):");
@@ -677,8 +719,22 @@
             } else alert("Contraseña incorrecta");
         }
     }
-    
+
     function exportarInscritosPDF() {
+        let filtrados = [...inscritos];
+        const term = searchTerm.trim().toLowerCase();
+        if (term) {
+            filtrados = filtrados.filter(i => 
+                i.nombre.toLowerCase().includes(term) || 
+                i.apellido.toLowerCase().includes(term) || 
+                i.ci.toString().includes(term)
+            );
+        }
+        if (filtros.facultad) filtrados = filtrados.filter(i => i.facultad === filtros.facultad);
+        if (filtros.carrera) filtrados = filtrados.filter(i => i.carrera === filtros.carrera);
+        if (filtros.semestreAnio) filtrados = filtrados.filter(i => i.semestreAnio == filtros.semestreAnio);
+        filtrados.sort((a, b) => `${a.nombre} ${a.apellido}`.localeCompare(`${b.nombre} ${b.apellido}`));
+
         const logoImg = document.querySelector('.logo-area img')?.src || 'assets/logo.png';
         const fechaInicio = new Date(eventInfo.fechaInicio).toLocaleDateString('es-ES');
         const fechaFin = new Date(eventInfo.fechaFin).toLocaleDateString('es-ES');
@@ -690,10 +746,20 @@
                 </div>
                 <h3>LISTA DE INSCRITOS</h3>
                 <table style="width:100%; border-collapse:collapse;">
-                    <thead><tr style="background:#0f3460; color:white;"><th>N°</th><th>Nombre</th><th>Cédula</th><th>Email</th><th>Pago</th><th>Asistencia</th></tr></thead>
+                    <thead><tr style="background:#0f3460; color:white;"><th>N°</th><th>Nombre</th><th>Cédula</th><th>Email</th><th>Facultad</th><th>Carrera</th><th>Semestre/Año</th><th>Pago</th><th>Asistencia</th></tr></thead>
                     <tbody>`;
-        inscritos.forEach((i, idx) => {
-            tablaHtml += `<tr><td>${idx+1}</td><td>${i.nombre} ${i.apellido}</td><td>${i.ci}</td><td>${i.correo}</td><td>${i.pagoVerificado ? 'Sí' : 'No'}</td><td>${i.presente ? 'Presente' : 'Ausente'}</td></tr>`;
+        filtrados.forEach((i, idx) => {
+            tablaHtml += `<tr>
+                <td style="border:1px solid #ddd; padding:8px;">${idx+1}</td>
+                <td style="border:1px solid #ddd; padding:8px;">${i.nombre} ${i.apellido}</td>
+                <td style="border:1px solid #ddd; padding:8px;">${i.ci}</td>
+                <td style="border:1px solid #ddd; padding:8px;">${i.correo}</td>
+                <td style="border:1px solid #ddd; padding:8px;">${i.facultad || '-'}</td>
+                <td style="border:1px solid #ddd; padding:8px;">${i.carrera || '-'}</td>
+                <td style="border:1px solid #ddd; padding:8px;">${i.semestreAnio || '-'}</td>
+                <td style="border:1px solid #ddd; padding:8px;">${i.pagoVerificado ? 'Sí' : 'No'}</td>
+                <td style="border:1px solid #ddd; padding:8px;">${i.presente ? 'Presente' : 'Ausente'}</td>
+            </tr>`;
         });
         tablaHtml += `</tbody></table><div style="text-align:center; margin-top:20px;">Seminario USCA - ${fechaInicio}</div></div>`;
         const element = document.createElement('div');
@@ -701,8 +767,7 @@
         document.body.appendChild(element);
         html2pdf().set({ margin: 0.5, filename: `inscritos_${eventInfo.fechaInicio}.pdf`, html2canvas: { scale: 2 } }).from(element).save().then(() => element.remove());
     }
-    
-    // ==================== CARNET ADMIN ====================
+        // ==================== CARNET ADMIN ====================
     function mostrarCarnetAdmin(nombreCompleto, ci, id) {
         const qrTexto = `ID: ${id}\nNombre: ${nombreCompleto}\nCI: ${ci}`;
         const container = document.getElementById('carnetAdminContent');
@@ -724,7 +789,7 @@
         new QRCode(qrDiv, { text: qrTexto, width: 120, height: 120, colorDark: "#0f3460", colorLight: "#ffffff" });
         document.getElementById('modalCarnetAdmin').classList.add('active');
     }
-    
+
     function cerrarModalCarnetAdmin() { document.getElementById('modalCarnetAdmin').classList.remove('active'); }
     function descargarCarnetAdmin() {
         const carnet = document.querySelector('#carnetAdminContent .carnet');
@@ -733,10 +798,10 @@
             link.download = 'carnet.png';
             link.href = canvas.toDataURL();
             link.click();
-        }).catch(() => alert('Error'));
+        }).catch(() => alert('Error al generar la imagen'));
     }
-    
-    // ==================== ESCÁNER QR ====================
+
+    // ==================== ESCÁNER QR OPTIMIZADO ====================
     function iniciarEscaner() {
         const video = document.getElementById('scannerVideo');
         navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(stream => {
@@ -747,9 +812,9 @@
             document.getElementById('btnDetener').style.display = 'inline-block';
             scannerActive = true;
             escanearQR();
-        }).catch(err => alert("Error cámara: "+err.message));
+        }).catch(err => alert("Error cámara: " + err.message));
     }
-    
+
     function detenerEscaner() {
         scannerActive = false;
         if (scannerAnimation) cancelAnimationFrame(scannerAnimation);
@@ -759,14 +824,16 @@
         document.getElementById('btnIniciar').style.display = 'inline-block';
         document.getElementById('btnDetener').style.display = 'none';
     }
-    
+
     function escanearQR() {
         if (!scannerActive) return;
         const video = document.getElementById('scannerVideo');
         if (video.videoWidth === 0) { scannerAnimation = requestAnimationFrame(escanearQR); return; }
+        // Usar canvas más pequeño para mayor velocidad
+        const scale = 0.4;
         const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth * 0.5;
-        canvas.height = video.videoHeight * 0.5;
+        canvas.width = video.videoWidth * scale;
+        canvas.height = video.videoHeight * scale;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -781,9 +848,12 @@
             const resultadoDiv = document.getElementById('scannerResultado');
             if (inscrito) {
                 resultadoDiv.innerHTML = `
-                    <div style="background:#e2e8f0; padding:8px; border-radius:8px;">
+                    <div style="background:#e2e8f0; padding:8px; border-radius:8px; margin-top:8px;">
                         <strong>${inscrito.nombre} ${inscrito.apellido}</strong><br>
                         CI: ${inscrito.ci}<br>
+                        Facultad: ${inscrito.facultad || '-'}<br>
+                        Carrera: ${inscrito.carrera || '-'}<br>
+                        Semestre/Año: ${inscrito.semestreAnio || '-'}<br>
                         Asistencia actual: ${inscrito.presente ? 'Presente' : 'Ausente'}<br>
                         <button class="btn btn-sm" onclick="cambiarAsistenciaDesdeEscaner('${inscrito.id}')">Cambiar asistencia</button>
                     </div>
@@ -792,25 +862,28 @@
                 resultadoDiv.innerHTML = '<span style="color:red;">Código no válido</span>';
                 setTimeout(() => resultadoDiv.innerHTML = '', 2000);
             }
+            // Pequeña pausa para evitar múltiples lecturas
+            setTimeout(() => { if (scannerActive) requestAnimationFrame(escanearQR); }, 500);
             return;
         }
         scannerAnimation = requestAnimationFrame(escanearQR);
     }
-    
+
     function cambiarAsistenciaDesdeEscaner(id) {
         const idx = inscritos.findIndex(i => i.id === id);
         if (idx !== -1) {
             inscritos[idx].presente = !inscritos[idx].presente;
             db.ref('inscritos/' + id).set(inscritos[idx]);
-            document.getElementById('scannerResultado').innerHTML = `<span style="color:green;">✅ Asistencia cambiada</span>`;
+            document.getElementById('scannerResultado').innerHTML = `<span style="color:green;">✅ Asistencia cambiada a ${inscritos[idx].presente ? 'Presente' : 'Ausente'}</span>`;
             setTimeout(() => document.getElementById('scannerResultado').innerHTML = '', 1500);
         }
     }
-    
-    // ==================== RENDER SECCIONES ====================
+
+    // ==================== RENDERIZADO DE SECCIONES (HTML dinámico) ====================
     function renderDashboard() {
-        return `<div class="kpi-grid" id="kpiContainer"></div><div class="section-card"><div class="section-title"><i class="fas fa-info-circle"></i> Resumen del evento</div><p id="resumenEvento"></p><canvas id="chartInscritos" style="max-height:250px;"></canvas></div>`;
+        return `<div class="kpi-grid" id="kpiContainer"></div><div class="section-card"><div class="section-title">Resumen del evento</div><p id="resumenEvento"></p><canvas id="chartInscritos" style="max-height:250px;"></canvas></div>`;
     }
+
     function renderEvento() {
         return `<div class="section-card">
             <div class="section-title">Configuración del Evento</div>
@@ -823,27 +896,31 @@
             <button class="btn" onclick="guardarEvento()">Guardar cambios</button>
         </div>`;
     }
+
     function renderAgenda() {
+        const fecha1 = new Date(eventInfo.fechaInicio).toLocaleDateString('es-ES');
+        const fecha2 = new Date(eventInfo.fechaFin).toLocaleDateString('es-ES');
         return `<div class="section-card">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1rem;">
                 <div class="section-title">Agenda del Evento</div>
                 <button class="btn" onclick="exportarAgendaPDF()"><i class="fas fa-file-pdf"></i> Exportar agenda a PDF</button>
             </div>
             <div class="dias-tabs">
-                <button id="tabDia1" class="dia-tab active" onclick="cambiarDia(1)">Día 1 - ${new Date(eventInfo.fechaInicio).toLocaleDateString('es-ES')}</button>
-                <button id="tabDia2" class="dia-tab" onclick="cambiarDia(2)">Día 2 - ${new Date(eventInfo.fechaFin).toLocaleDateString('es-ES')}</button>
+                <button id="tabDia1" class="dia-tab active" onclick="cambiarDiaAdmin(1)">Día 1 - ${fecha1}</button>
+                <button id="tabDia2" class="dia-tab" onclick="cambiarDiaAdmin(2)">Día 2 - ${fecha2}</button>
             </div>
-            <div class="section-title"><i class="fas fa-plus-circle"></i> Agregar actividad (Día ${currentDia})</div>
+            <div class="section-title">Agregar actividad (Día ${currentDiaAdmin})</div>
             <div class="form-agregar">
                 <input type="time" id="nuevaHora" placeholder="Hora">
                 <input type="text" id="nuevoTema" placeholder="Tema">
                 <input type="text" id="nuevoSpeaker" placeholder="Expositor">
                 <button class="btn" onclick="agregarActividad()">➕ Agregar</button>
             </div>
-            <div class="section-title">Actividades del Día ${currentDia}</div>
+            <div class="section-title">Actividades del Día ${currentDiaAdmin}</div>
             <div id="listaAgenda"></div>
         </div>`;
     }
+
     function renderAuspiciantes() {
         return `<div class="section-card">
             <div class="section-title">Auspiciantes</div>
@@ -855,24 +932,41 @@
             <div id="listaAuspiciantes"></div>
         </div>`;
     }
+
     function renderInscritos() {
+        // Crear opciones para los filtros de carrera
+        const carreras = ["Medicina", "Odontología", "Bioquímica", "Química y Farmacia", "Licenciatura en Enfermería", "Licenciatura en Obstetricia", "Licenciatura en Fisioterapia y Kinesiología", "Derecho", "Ciencias de la Educación"];
+        const optionsCarreras = carreras.map(c => `<option value="${c}">${c}</option>`).join('');
         return `<div class="section-card">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1rem;">
                 <div class="section-title">Lista de inscritos</div>
                 <button class="btn" onclick="exportarInscritosPDF()"><i class="fas fa-file-pdf"></i> Exportar a PDF</button>
             </div>
             <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Buscar por nombre o cédula" onkeyup="buscarInscritos()">
+                <input type="text" id="searchInput" placeholder="🔍 Buscar por nombre o cédula" onkeyup="buscarInscritos()">
                 <button class="btn" onclick="buscarInscritos()">Buscar</button>
                 <button class="btn" style="background:#64748b;" onclick="limpiarBusqueda()">Limpiar</button>
+            </div>
+            <div class="filtros-container">
+                <select id="filtroFacultad" onchange="aplicarFiltros()">
+                    <option value="">Todas las facultades</option>
+                    <option value="USCA">USCA</option>
+                    <option value="Otros">Otros</option>
+                </select>
+                <select id="filtroCarrera" onchange="aplicarFiltros()">
+                    <option value="">Todas las carreras</option>
+                    ${optionsCarreras}
+                </select>
+                <input type="text" id="filtroSemestre" placeholder="Filtrar por semestre/año" onkeyup="aplicarFiltros()">
             </div>
             <div id="listaInscritosContainer"></div>
         </div>`;
     }
+
     function renderScanner() {
         return `<div class="section-card">
             <div class="section-title">Escáner QR</div>
-            <p>Enfoca el código QR del carnet</p>
+            <p>Enfoca el código QR del carnet para ver información y cambiar asistencia</p>
             <div class="scanner-container">
                 <video id="scannerVideo" playsinline></video>
                 <div style="margin-top:1rem;">
@@ -883,16 +977,23 @@
             </div>
         </div>`;
     }
-    
+
     function exportarAgendaPDF() {
         const logoImg = document.querySelector('.logo-area img')?.src || 'assets/logo.png';
         const dia1 = new Date(eventInfo.fechaInicio).toLocaleDateString('es-ES');
         const dia2 = new Date(eventInfo.fechaFin).toLocaleDateString('es-ES');
-        let html = `<div style="font-family:'Inter',sans-serif; padding:20px;"><div style="text-align:center;"><img src="${logoImg}" style="height:60px;"><h2>AGENDA DEL SEMINARIO</h2><p>${dia1} y ${dia2} | ${eventInfo.horaInicio} - ${eventInfo.horaFin}<br>${eventInfo.ubicacion}</p></div>`;
-        for (let d=1; d<=2; d++) {
-            const actividades = agenda.filter(a => a.dia == d).sort((a,b)=>a.hora.localeCompare(b.hora));
-            html += `<h3>Día ${d} - ${d===1?dia1:dia2}</h3><table style="width:100%; border-collapse:collapse;"><thead><tr style="background:#0f3460; color:white;"><th>Hora</th><th>Tema</th><th>Expositor</th></tr></thead><tbody>`;
-            actividades.forEach(a => html += `<tr><td>${a.hora}</td><td>${a.tema}</td><td>${a.speaker || '---'}</td></tr>`);
+        let html = `<div style="font-family:'Inter',sans-serif; padding:20px;">
+            <div style="text-align:center; border-bottom:2px solid #0f3460; margin-bottom:20px;">
+                <img src="${logoImg}" style="height:60px;"><h2 style="color:#0f3460;">AGENDA DEL SEMINARIO</h2>
+                <p>${dia1} y ${dia2} | ${eventInfo.horaInicio} - ${eventInfo.horaFin}<br>${eventInfo.ubicacion}</p>
+            </div>`;
+        for (let d = 1; d <= 2; d++) {
+            const actividades = agenda.filter(a => a.dia == d).sort((a, b) => a.hora.localeCompare(b.hora));
+            html += `<h3>Día ${d} - ${d === 1 ? dia1 : dia2}</h3>
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead><tr style="background:#0f3460; color:white;"><th>Hora</th><th>Tema</th><th>Expositor</th></tr></thead>
+                    <tbody>`;
+            actividades.forEach(a => html += `<tr><td style="border:1px solid #ddd; padding:8px;">${a.hora}</td><td style="border:1px solid #ddd; padding:8px;">${a.tema}</td><td style="border:1px solid #ddd; padding:8px;">${a.speaker || '---'}</td></tr>`);
             html += `</tbody></table><br>`;
         }
         html += `<div style="text-align:center;">Seminario USCA - ${dia1}</div></div>`;
@@ -901,8 +1002,8 @@
         document.body.appendChild(element);
         html2pdf().set({ margin: 0.5, filename: `agenda_completa.pdf`, html2canvas: { scale: 2 } }).from(element).save().then(() => element.remove());
     }
-    
-    // ==================== NAVEGACIÓN Y UTILS ====================
+
+    // ==================== NAVEGACIÓN Y UTILIDADES ====================
     function cambiarSeccion(seccion) {
         const content = document.getElementById('mainContent');
         if (seccion === 'dashboard') {
@@ -927,7 +1028,7 @@
         document.querySelector(`.nav-item[data-tab="${seccion}"]`).classList.add('active');
         if (seccion !== 'scanner') detenerEscaner();
     }
-    
+
     window.buscarInscritos = function() {
         const input = document.getElementById('searchInput');
         searchTerm = input ? input.value : '';
@@ -937,6 +1038,10 @@
         searchTerm = '';
         const input = document.getElementById('searchInput');
         if (input) input.value = '';
+        document.getElementById('filtroFacultad').value = '';
+        document.getElementById('filtroCarrera').value = '';
+        document.getElementById('filtroSemestre').value = '';
+        filtros = { facultad: '', carrera: '', semestreAnio: '' };
         actualizarListaInscritos();
     };
     window.verImagen = function(src) {
@@ -946,8 +1051,9 @@
     window.cerrarModalImagen = function() {
         document.getElementById('modalImagen').classList.remove('active');
     };
-    
-    // ==================== LOGIN ====================
+    window.aplicarFiltros = aplicarFiltros;
+
+    // ==================== LOGIN / LOGOUT ====================
     function verificarLogin() {
         const pass = document.getElementById('adminPassword').value;
         if (pass === 'usca2026') {
@@ -960,6 +1066,7 @@
             document.getElementById('loginError').innerText = 'Contraseña incorrecta';
         }
     }
+
     function cerrarSesion() {
         sessionStorage.removeItem('adminLogged');
         detenerEscaner();
@@ -967,12 +1074,15 @@
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('adminPassword').value = '';
         document.getElementById('loginError').innerText = '';
+        // Forzar recarga para limpiar el estado correctamente
+        window.location.reload();
     }
-    
-    // Exponer globalmente las funciones necesarias
-    window.cambiarSeccion = cambiarSeccion;
+
+    // Exponer funciones globales
     window.verificarLogin = verificarLogin;
     window.cerrarSesion = cerrarSesion;
+    window.cambiarSeccion = cambiarSeccion;
+    window.guardarEvento = guardarEvento;
     window.agregarActividad = agregarActividad;
     window.eliminarActividad = eliminarActividad;
     window.agregarAuspiciante = agregarAuspiciante;
@@ -988,13 +1098,13 @@
     window.cambiarAsistenciaDesdeEscaner = cambiarAsistenciaDesdeEscaner;
     window.exportarInscritosPDF = exportarInscritosPDF;
     window.exportarAgendaPDF = exportarAgendaPDF;
-    window.cambiarDia = cambiarDia;
-    window.guardarEvento = guardarEvento;
-    
+    window.cambiarDiaAdmin = cambiarDiaAdmin;
+
+    // Eventos del sidebar
     document.querySelectorAll('.nav-item').forEach(el => {
         el.addEventListener('click', () => cambiarSeccion(el.getAttribute('data-tab')));
     });
-    
+
     checkSession();
 </script>
 </body>

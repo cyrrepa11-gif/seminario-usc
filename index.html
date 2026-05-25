@@ -13,7 +13,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
-        /* ESTILO ADICIONAL PARA FORZAR CENTRADO DE TÍTULOS */
+        /* Forzar centrado de títulos (mismo que antes) */
         .auspiciantes-section h2,
         .descripcion-section h2,
         .agenda-section h2,
@@ -23,6 +23,30 @@
             display: block !important;
             margin-left: auto !important;
             margin-right: auto !important;
+        }
+        /* Estilos para pestañas de días en agenda pública */
+        .dias-tabs-public {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .dia-tab-public {
+            background: #e0e0e0;
+            border: none;
+            padding: 0.5rem 1.5rem;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+        .dia-tab-public.active {
+            background: #e94560;
+            color: white;
+        }
+        /* Estilos para campos dinámicos del formulario */
+        .field-dynamic {
+            transition: all 0.3s;
         }
     </style>
 </head>
@@ -48,9 +72,9 @@
     <div class="hero-content">
         <h1>III Seminario de Actualización Quirúrgica</h1>
         <div class="hero-info">
-            <div class="info-item"><div>📅 Fecha</div><div class="info-item-value" id="fechaEvento">8 de Agosto 2026</div></div>
-            <div class="info-item"><div>⏰ Horario</div><div class="info-item-value" id="horaEvento">8:00 AM - 5:00 PM</div></div>
-            <div class="info-item"><div>📍 Ubicación</div><div class="info-item-value">USCA</div></div>
+            <div class="info-item"><div>📅 Fechas</div><div class="info-item-value" id="fechasEvento"></div></div>
+            <div class="info-item"><div>⏰ Horario</div><div class="info-item-value" id="horaEvento"></div></div>
+            <div class="info-item"><div>📍 Ubicación</div><div class="info-item-value" id="ubicacionEvento"></div></div>
         </div>
     </div>
 </section>
@@ -70,6 +94,10 @@
 <section class="agenda-section" id="agenda">
     <h2 class="section-title">Agenda del Evento</h2>
     <p class="section-subtitle">Programa completo de actividades</p>
+    <div class="dias-tabs-public">
+        <button class="dia-tab-public active" data-dia="1">Día 1</button>
+        <button class="dia-tab-public" data-dia="2">Día 2</button>
+    </div>
     <div class="agenda-grid" id="agendaGrid"></div>
 </section>
 
@@ -91,6 +119,36 @@
             <div class="form-group"><label>Apellido</label><input type="text" id="apellido" required></div>
             <div class="form-group"><label>Cédula</label><input type="number" id="ci" required></div>
             <div class="form-group"><label>Email</label><input type="email" id="correo" required></div>
+            
+            <!-- Nuevos campos: Facultad, Carrera, Semestre/Año -->
+            <div class="form-group">
+                <label>Facultad</label>
+                <select id="facultad" required>
+                    <option value="USCA">USCA</option>
+                    <option value="Otros">Otros</option>
+                </select>
+                <input type="text" id="facultadOtro" placeholder="Especifique su facultad" style="display:none; margin-top:5px;">
+            </div>
+            <div class="form-group">
+                <label>Carrera</label>
+                <select id="carrera" required>
+                    <option value="">Seleccione...</option>
+                    <option value="Medicina">Medicina</option>
+                    <option value="Odontología">Odontología</option>
+                    <option value="Bioquímica">Bioquímica</option>
+                    <option value="Química y Farmacia">Química y Farmacia</option>
+                    <option value="Licenciatura en Enfermería">Licenciatura en Enfermería</option>
+                    <option value="Licenciatura en Obstetricia">Licenciatura en Obstetricia</option>
+                    <option value="Licenciatura en Fisioterapia y Kinesiología">Licenciatura en Fisioterapia y Kinesiología</option>
+                    <option value="Derecho">Derecho</option>
+                    <option value="Ciencias de la Educación">Ciencias de la Educación</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label id="labelSemestreAnio">Semestre / Año</label>
+                <input type="number" id="semestreAnio" placeholder="Ej: 4" required>
+            </div>
+            
             <button type="submit" class="btn-submit">Registrarme</button>
         </form>
     </div>
@@ -106,7 +164,7 @@
             <div class="carnet-nombre" id="carnetNombre"></div>
             <div class="carnet-ci" id="carnetCI"></div>
             <div id="carnetQR"></div>
-            <div class="carnet-footer">8 de Agosto 2026</div>
+            <div class="carnet-footer">Caaguazú 2026</div>
         </div>
         <button class="btn-descargar-carnet" onclick="descargarCarnet()">Descargar Carnet</button>
     </div>
@@ -123,88 +181,65 @@
         messagingSenderId: "560733409147",
         appId: "1:560733409147:web:13f01f10f3ee961ab677de"
     };
-    
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-    }
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    
+
     // ==================== VARIABLES GLOBALES ====================
     let agendaItems = [];
     let auspiciantesItems = [];
-    let inscritosItems = [];
     let eventInfo = {};
     let uploadedImage = null;
-    
-    // ==================== FUNCIONES DE FIREBASE ====================
-    function cargarDatosDesdeFirebase() {
-        // Cargar agenda
-        db.ref('agenda').on('value', (snap) => {
-            const data = snap.val();
-            if (data) {
-                agendaItems = Object.values(data);
-            } else {
-                agendaItems = [
-                    {id:"1", hora:"08:00", tema:"Bienvenida y Apertura", speaker:"Director USCA"},
-                    {id:"2", hora:"09:00", tema:"Laparoscopia Avanzada", speaker:"Dr. García"},
-                    {id:"3", hora:"10:30", tema:"Receso", speaker:""},
-                    {id:"4", hora:"11:00", tema:"Protocolos Quirúrgicos Modernos", speaker:"Dra. López"},
-                    {id:"5", hora:"12:30", tema:"Almuerzo", speaker:""},
-                    {id:"6", hora:"14:00", tema:"Panel de Especialistas", speaker:"Equipo Médico"},
-                    {id:"7", hora:"15:30", tema:"Taller Práctico", speaker:"Profesor Torres"},
-                    {id:"8", hora:"17:00", tema:"Clausura", speaker:"Director USCA"}
-                ];
-                const agendaObj = {};
-                agendaItems.forEach(item => agendaObj[item.id] = item);
-                db.ref('agenda').set(agendaObj);
-            }
-            mostrarAgenda();
-        });
-        
-        // Cargar auspiciantes
-        db.ref('auspiciantes').on('value', (snap) => {
-            const data = snap.val();
-            if (data) {
-                auspiciantesItems = Object.values(data);
-            } else {
-                auspiciantesItems = [];
-            }
-            mostrarAuspiciantes();
-        });
-        
-        // Cargar inscritos
-        db.ref('inscritos').on('value', (snap) => {
-            const data = snap.val();
-            if (data) {
-                inscritosItems = Object.values(data);
-            } else {
-                inscritosItems = [];
-            }
-        });
-        
-        // Cargar evento
-        db.ref('evento').on('value', (snap) => {
-            if (snap.val()) {
-                eventInfo = snap.val();
-            } else {
+    let currentDiaPublic = 1;  // 1 o 2 para la agenda pública
+
+    // ==================== FUNCIONES DE CARGA ====================
+    function cargarDatosPublicos() {
+        // Evento
+        db.ref('evento').on('value', snap => {
+            if (snap.val()) eventInfo = snap.val();
+            else {
                 eventInfo = {
-                    descripcion: "El III Seminario de Actualización Quirúrgica es un evento de formación de excelencia en ciencias de la salud, diseñado para profesionales del área médica.",
-                    fecha: "2026-08-08",
+                    descripcion: "El III Seminario de Actualización Quirúrgica es un evento de formación...",
+                    fechaInicio: "2026-08-08",
+                    fechaFin: "2026-08-09",
                     horaInicio: "08:00",
-                    horaFin: "17:00"
+                    horaFin: "17:00",
+                    ubicacion: "USCA - Caaguazú"
                 };
                 db.ref('evento').set(eventInfo);
             }
             mostrarInfoEvento();
         });
+        // Agenda
+        db.ref('agenda').on('value', snap => {
+            const data = snap.val();
+            agendaItems = data ? Object.values(data) : [];
+            mostrarAgendaPublica();
+        });
+        // Auspiciantes
+        db.ref('auspiciantes').on('value', snap => {
+            const data = snap.val();
+            auspiciantesItems = data ? Object.values(data) : [];
+            mostrarAuspiciantes();
+        });
     }
-    
-    // ==================== FUNCIONES DE VISTA ====================
-    function mostrarAgenda() {
-        const grid = document.getElementById('agendaGrid');
-        if(!grid) return;
-        if(agendaItems.length===0) grid.innerHTML='<p>No hay actividades</p>';
-        else grid.innerHTML = agendaItems.map(item => `
+
+    function mostrarInfoEvento() {
+        const fechaInicio = new Date(eventInfo.fechaInicio).toLocaleDateString('es-ES', {year:'numeric',month:'long',day:'numeric'});
+        const fechaFin = new Date(eventInfo.fechaFin).toLocaleDateString('es-ES', {year:'numeric',month:'long',day:'numeric'});
+        document.getElementById('fechasEvento').innerText = `${fechaInicio} - ${fechaFin}`;
+        document.getElementById('horaEvento').innerText = `${eventInfo.horaInicio} - ${eventInfo.horaFin}`;
+        document.getElementById('ubicacionEvento').innerText = eventInfo.ubicacion || "USCA";
+        document.getElementById('descripcionEvento').innerHTML = `<p>${eventInfo.descripcion}</p>`;
+    }
+
+    function mostrarAgendaPublica() {
+        const container = document.getElementById('agendaGrid');
+        const actividadesDia = agendaItems.filter(item => item.dia == currentDiaPublic).sort((a,b) => a.hora.localeCompare(b.hora));
+        if (actividadesDia.length === 0) {
+            container.innerHTML = '<p>No hay actividades para este día.</p>';
+            return;
+        }
+        container.innerHTML = actividadesDia.map(item => `
             <div class="agenda-card">
                 <div class="agenda-time">🕒 ${item.hora}</div>
                 <div class="agenda-topic">${item.tema}</div>
@@ -212,11 +247,10 @@
             </div>
         `).join('');
     }
-    
+
     function mostrarAuspiciantes() {
         const container = document.getElementById('carouselAuspiciantes');
-        if(!container) return;
-        if(auspiciantesItems.length===0) { container.innerHTML = '<p style="text-align:center;">Próximamente auspiciantes</p>'; return; }
+        if (!auspiciantesItems.length) { container.innerHTML = '<p style="text-align:center;">Próximamente auspiciantes</p>'; return; }
         const items = [...auspiciantesItems, ...auspiciantesItems].map(a => `
             <div class="auspiciante-item">
                 ${a.imagen ? `<img src="${a.imagen}" class="auspiciante-logo" style="height:80px;">` : `<div style="font-size:3rem;">🏥</div>`}
@@ -225,23 +259,16 @@
         `).join('');
         container.innerHTML = items;
     }
-    
-    function mostrarInfoEvento() {
-        const fecha = new Date(eventInfo.fecha+'T00:00:00');
-        document.getElementById('fechaEvento').innerText = fecha.toLocaleDateString('es-ES', {year:'numeric',month:'long',day:'numeric'});
-        document.getElementById('horaEvento').innerText = `${eventInfo.horaInicio} - ${eventInfo.horaFin}`;
-        document.getElementById('descripcionEvento').innerHTML = `<p>${eventInfo.descripcion}</p>`;
-    }
-    
-    // ==================== INSCRIPCIÓN Y CARNET ====================
+
+    // ==================== INSCRIPCIÓN ====================
     function abrirModalInscripcion() { document.getElementById('modalInscripcion').classList.add('active'); }
     function cerrarModalInscripcion() { 
         document.getElementById('modalInscripcion').classList.remove('active');
         document.getElementById('inscripcionForm').reset();
         document.getElementById('imagePreview').innerHTML = '';
         uploadedImage = null;
+        document.getElementById('facultadOtro').style.display = 'none';
     }
-    
     function handleFileUpload(e) {
         const file = e.target.files[0];
         if(!file || !file.type.match('image.*')) { alert('Solo imágenes'); return; }
@@ -249,7 +276,20 @@
         reader.onload = (ev) => { uploadedImage = ev.target.result; document.getElementById('imagePreview').innerHTML = `<img src="${uploadedImage}" style="max-width:100%; max-height:150px;">`; };
         reader.readAsDataURL(file);
     }
-    
+
+    // Mostrar/ocultar campo "otra facultad"
+    document.getElementById('facultad').addEventListener('change', function() {
+        const otro = document.getElementById('facultadOtro');
+        otro.style.display = this.value === 'Otros' ? 'block' : 'none';
+        if (this.value !== 'Otros') otro.value = '';
+    });
+    // Cambiar etiqueta según carrera
+    document.getElementById('carrera').addEventListener('change', function() {
+        const label = document.getElementById('labelSemestreAnio');
+        if (this.value === 'Medicina') label.innerText = 'Semestre';
+        else label.innerText = 'Año';
+    });
+
     function registrarInscrito(e) {
         e.preventDefault();
         if(!uploadedImage) { alert('Carga el comprobante'); return; }
@@ -257,30 +297,30 @@
         const apellido = document.getElementById('apellido').value.trim();
         const ci = document.getElementById('ci').value.trim();
         const correo = document.getElementById('correo').value.trim();
-        if(!nombre||!apellido||!ci||!correo) { alert('Completa todos los campos'); return; }
+        let facultad = document.getElementById('facultad').value;
+        if (facultad === 'Otros') facultad = document.getElementById('facultadOtro').value.trim();
+        if (!facultad) facultad = 'No especificada';
+        const carrera = document.getElementById('carrera').value;
+        const semestreAnio = document.getElementById('semestreAnio').value;
+        if(!nombre||!apellido||!ci||!correo||!carrera||!semestreAnio) { alert('Completa todos los campos'); return; }
         
         const nuevo = { 
             id: Date.now().toString(), 
-            nombre, 
-            apellido, 
-            ci, 
-            correo, 
+            nombre, apellido, ci, correo, 
             comprobante: uploadedImage, 
             fecha: new Date().toISOString(), 
             pagoVerificado: false,
-            presente: false
+            presente: false,
+            facultad,
+            carrera,
+            semestreAnio
         };
-        
-        // Guardar en Firebase
-        db.ref('inscritos/' + nuevo.id).set(nuevo)
-            .then(() => {
-                console.log('✅ Inscrito guardado en Firebase');
-                mostrarCarnet(`${nombre} ${apellido}`, ci, nuevo.id);
-                cerrarModalInscripcion();
-            })
-            .catch(err => alert('Error al guardar: ' + err.message));
+        db.ref('inscritos/' + nuevo.id).set(nuevo).then(() => {
+            mostrarCarnet(`${nombre} ${apellido}`, ci, nuevo.id);
+            cerrarModalInscripcion();
+        }).catch(err => alert('Error al guardar: ' + err.message));
     }
-    
+
     function mostrarCarnet(nombreCompleto, ci, qrData) {
         document.getElementById('carnetNombre').innerText = nombreCompleto.toUpperCase();
         document.getElementById('carnetCI').innerText = `CI: ${ci}`;
@@ -289,18 +329,24 @@
         new QRCode(qrDiv, { text: qrData, width: 150, height: 150, colorDark: "#0f3460", colorLight: "#ffffff" });
         document.getElementById('modalCarnet').classList.add('active');
     }
-    
     function cerrarCarnet() { document.getElementById('modalCarnet').classList.remove('active'); }
-    function descargarCarnet() { const carnet = document.querySelector('.carnet'); html2canvas(carnet, { scale:2 }).then(canvas=>{ const link = document.createElement('a'); link.download = 'carnet.png'; link.href = canvas.toDataURL(); link.click(); }).catch(()=>alert('Toma captura')); }
+    function descargarCarnet() { 
+        const carnet = document.querySelector('.carnet'); 
+        html2canvas(carnet, { scale:2 }).then(canvas=>{ const link = document.createElement('a'); link.download = 'carnet.png'; link.href = canvas.toDataURL(); link.click(); }).catch(()=>alert('Captura de pantalla')); 
+    }
     function scrollToSection(id) { document.getElementById(id).scrollIntoView({ behavior:'smooth' }); }
-    
-    // ==================== INICIALIZAR ====================
-    cargarDatosDesdeFirebase();
-    
-    window.onclick = function(e) { 
-        if(e.target.classList.contains('modal-inscripcion')) cerrarModalInscripcion(); 
-        if(e.target.classList.contains('modal-carnet')) cerrarCarnet(); 
-    };
+
+    // Pestañas de agenda pública
+    document.querySelectorAll('.dia-tab-public').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            document.querySelectorAll('.dia-tab-public').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            currentDiaPublic = parseInt(tab.dataset.dia);
+            mostrarAgendaPublica();
+        });
+    });
+
+    cargarDatosPublicos();
 </script>
 </body>
 </html>
