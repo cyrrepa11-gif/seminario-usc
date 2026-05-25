@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Administrador - Seminario USCA</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f1f5f9;
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* Login */
+        .login-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #0f3460 0%, #1a4d7a 100%);
+        }
+        .login-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.2);
+        }
+        .login-card h2 {
+            color: #0f3460;
+            font-family: 'Playfair Display', serif;
+            margin-bottom: 1rem;
+        }
+        .login-card input {
+            width: 100%;
+            padding: 0.8rem;
+            margin: 1rem 0;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            font-family: 'Inter', sans-serif;
+        }
+        .login-card button {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 0.8rem;
+            width: 100%;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .error-msg { color: #e94560; margin-top: 0.5rem; }
+        /* Admin Panel - full screen */
+        .admin-panel {
+            display: none;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .admin-panel.active { display: flex; }
+        /* Header */
+        .admin-header {
+            background: white;
+            padding: 0.8rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .logo-area img { height: 40px; }
+        .logo-area h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #0f3460;
+        }
+        .user-area {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .user-email {
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+        .btn-logout {
+            background: #e94560;
+            border: none;
+            color: white;
+            padding: 0.4rem 1rem;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        /* Layout */
+        .admin-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            padding: 1.5rem 0;
+            overflow-y: auto;
+        }
+        .nav-item {
+            padding: 0.7rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            cursor: pointer;
+            transition: 0.2s;
+            color: #475569;
+            font-weight: 500;
+            margin: 0.2rem 0.8rem;
+            border-radius: 12px;
+        }
+        .nav-item i { width: 24px; font-size: 1.1rem; }
+        .nav-item.active {
+            background: #0f3460;
+            color: white;
+        }
+        .nav-item:hover:not(.active) { background: #f1f5f9; }
+        /* Main content */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            background: #f1f5f9;
+        }
+        /* KPI cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+        .kpi-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #e2e8f0;
+        }
+        .kpi-info h3 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #64748b;
+            margin-bottom: 0.3rem;
+        }
+        .kpi-number {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #0f3460;
+        }
+        .kpi-icon {
+            font-size: 2rem;
+            color: #e94560;
+            opacity: 0.7;
+        }
+        .section-card {
+            background: white;
+            border-radius: 20px;
+            padding: 1.2rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #e2e8f0;
+        }
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #0f3460;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.3rem;
+            font-size: 0.85rem;
+            color: #1e293b;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .btn-sm {
+            padding: 0.3rem 0.8rem;
+            font-size: 0.75rem;
+        }
+        .btn-success { background: #16a34a; }
+        .btn-warning { background: #f59e0b; color: #1f2937; }
+        .btn-danger { background: #dc2626; }
+        .list-item {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 0.8rem;
+            margin-bottom: 0.6rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #e2e8f0;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .inscrito-info { flex: 2; min-width: 200px; }
+        .inscrito-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .img-thumb {
+            width: 35px;
+            height: 35px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .highlight {
+            background-color: #fef08a;
+            border-radius: 4px;
+            padding: 0 2px;
+            font-weight: 600;
+        }
+        .search-container {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+        }
+        .no-results {
+            text-align: center;
+            padding: 2rem;
+            color: #e94560;
+            font-weight: 500;
+        }
+        .scanner-container { text-align: center; }
+        #scannerVideo {
+            width: 100%;
+            max-width: 500px;
+            border-radius: 16px;
+            background: #000;
+            margin: 0 auto;
+        }
+        .modal-imagen {
+            display: none;
+            position: fixed;
+            top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        .modal-imagen.active { display: flex; }
+        .modal-imagen img { max-width: 90%; max-height: 90%; border-radius: 16px; }
+        @media (max-width: 768px) {
+            .sidebar { width: 80px; }
+            .nav-item span { display: none; }
+            .nav-item i { margin: 0 auto; }
+            .search-container { flex-direction: column; align-items: stretch; }
+        }
+        /* Estilos para el PDF de la agenda */
+        .pdf-agenda {
+            font-family: 'Inter', sans-serif;
+            padding: 20px;
+            max-width: 100%;
+            background: white;
+        }
+        .pdf-header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #0f3460;
+            padding-bottom: 10px;
+        }
+        .pdf-header img {
+            height: 60px;
+            margin-bottom: 10px;
+        }
+        .pdf-header h2 {
+            color: #0f3460;
+            font-size: 1.8rem;
+            margin: 5px 0;
+        }
+        .pdf-header p {
+            color: #e94560;
+            font-weight: 500;
+        }
+        .pdf-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .pdf-table th, .pdf-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        .pdf-table th {
+            background-color: #0f3460;
+            color: white;
+        }
+        .pdf-footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 0.8rem;
+            color: #64748b;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="loginScreen" class="login-container">
+    <div class="login-card">
+        <i class="fas fa-lock" style="font-size: 3rem; color:#0f3460;"></i>
+        <h2>Acceso Administrador</h2>
+        <input type="password" id="adminPassword" placeholder="Contraseña" onkeypress="if(event.key==='Enter') verificarLogin()">
+        <button onclick="verificarLogin()">Ingresar</button>
+        <div id="loginError" class="error-msg"></div>
+    </div>
+</div>
+
+<!-- Panel Admin -->
+<div id="adminPanel" class="admin-panel">
+    <div class="admin-header">
+        <div class="logo-area">
+            <img src="assets/logo.png" alt="Logo">
+            <h1>ADMINISTRADOR</h1>
+        </div>
+        <div class="user-area">
+            <span class="user-email"><i class="fas fa-envelope"></i> admin@usca.com</span>
+            <button class="btn-logout" onclick="cerrarSesion()"><i class="fas fa-sign-out-alt"></i> Salir</button>
+        </div>
+    </div>
+    <div class="admin-layout">
+        <div class="sidebar">
+            <div class="nav-item active" data-tab="dashboard"><i class="fas fa-tachometer-alt"></i> <span>Dashboard</span></div>
+            <div class="nav-item" data-tab="evento"><i class="fas fa-calendar-alt"></i> <span>Evento</span></div>
+            <div class="nav-item" data-tab="agenda"><i class="fas fa-list-ul"></i> <span>Agenda</span></div>
+            <div class="nav-item" data-tab="auspiciantes"><i class="fas fa-handshake"></i> <span>Auspiciantes</span></div>
+            <div class="nav-item" data-tab="inscritos"><i class="fas fa-users"></i> <span>Inscritos</span></div>
+            <div class="nav-item" data-tab="scanner"><i class="fas fa-qrcode"></i> <span>Escáner QR</span></div>
+        </div>
+        <div class="main-content" id="mainContent"></div>
+    </div>
+</div>
+
+<div id="modalImagen" class="modal-imagen" onclick="cerrarModalImagen()"><img id="imgGrande" src=""></div>
+
+<script>
+    // ==================== DATOS ====================
+    let agenda = [], auspiciantes = [], inscritos = [], eventInfo = {};
+    let scannerActive = false, scannerStream = null, scannerAnimation = null;
+    let searchTerm = '';   // texto original (con espacios) para la búsqueda y resaltado
+
+    function cargarDatos() {
+        agenda = JSON.parse(localStorage.getItem('agenda_items') || '[{"id":"1","hora":"08:00","tema":"Bienvenida","speaker":"Director"},{"id":"2","hora":"09:00","tema":"Laparoscopia Avanzada","speaker":"Dr. García"},{"id":"3","hora":"10:30","tema":"Receso","speaker":""},{"id":"4","hora":"11:00","tema":"Protocolos Quirúrgicos Modernos","speaker":"Dra. López"},{"id":"5","hora":"12:30","tema":"Almuerzo","speaker":""},{"id":"6","hora":"14:00","tema":"Panel de Especialistas","speaker":"Equipo Médico"},{"id":"7","hora":"15:30","tema":"Taller Práctico","speaker":"Profesor Torres"},{"id":"8","hora":"17:00","tema":"Clausura","speaker":"Director USCA"}]');
+        auspiciantes = JSON.parse(localStorage.getItem('auspiciantes_items') || '[]');
+        inscritos = JSON.parse(localStorage.getItem('inscritos_items') || '[]');
+        eventInfo = JSON.parse(localStorage.getItem('evento_info') || '{"descripcion":"Evento de actualización quirúrgica","fecha":"2026-08-08","horaInicio":"08:00","horaFin":"17:00"}');
+    }
+    function guardarDatos() {
+        localStorage.setItem('agenda_items', JSON.stringify(agenda));
+        localStorage.setItem('auspiciantes_items', JSON.stringify(auspiciantes));
+        localStorage.setItem('inscritos_items', JSON.stringify(inscritos));
+        localStorage.setItem('evento_info', JSON.stringify(eventInfo));
+    }
+
+    // ==================== TOGGLES ====================
+    window.togglePago = function(id) {
+        let idx = inscritos.findIndex(i => i.id === id);
+        if(idx !== -1) { inscritos[idx].pagoVerificado = !inscritos[idx].pagoVerificado; guardarDatos(); actualizarListaInscritos(); }
+    };
+    window.toggleAsistencia = function(id) {
+        let idx = inscritos.findIndex(i => i.id === id);
+        if(idx !== -1) { inscritos[idx].presente = !inscritos[idx].presente; guardarDatos(); actualizarListaInscritos(); }
+    };
+
+    // Función para resaltar todas las palabras individuales del término de búsqueda
+    function resaltarPalabras(texto, busqueda) {
+        if (!busqueda.trim()) return texto;
+        const palabras = busqueda.trim().split(/\s+/);
+        let resultado = texto;
+        palabras.forEach(palabra => {
+            if (palabra.length === 0) return;
+            const escapado = palabra.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`(${escapado})`, 'gi');
+            resultado = resultado.replace(regex, `<span class="highlight">$1</span>`);
+        });
+        return resultado;
+    }
+
+    function textoNormalizadoSinEspacios(str) {
+        return str.toLowerCase().replace(/\s/g, '');
+    }
+
+    function actualizarListaInscritos() {
+        const container = document.getElementById('listaInscritosContainer');
+        if (!container) return;
+        const termRaw = searchTerm.trim();
+        let inscritosFiltrados = inscritos;
+        if (termRaw !== '') {
+            const termNormalizado = textoNormalizadoSinEspacios(termRaw);
+            inscritosFiltrados = inscritos.filter(i => {
+                const nombreCompleto = `${i.nombre} ${i.apellido}`;
+                const nombreCompletoSinEspacios = textoNormalizadoSinEspacios(nombreCompleto);
+                const ciSinEspacios = textoNormalizadoSinEspacios(i.ci.toString());
+                return nombreCompletoSinEspacios.includes(termNormalizado) || ciSinEspacios.includes(termNormalizado);
+            });
+        }
+        if (inscritosFiltrados.length === 0) {
+            container.innerHTML = `<div class="no-results"><i class="fas fa-exclamation-triangle"></i> No se encontraron inscritos que coincidan con "<strong>${termRaw}</strong>"</div>`;
+            return;
+        }
+        let html = '';
+        inscritosFiltrados.forEach(i => {
+            let nombreResaltado = resaltarPalabras(i.nombre, searchTerm);
+            let apellidoResaltado = resaltarPalabras(i.apellido, searchTerm);
+            let ciResaltado = resaltarPalabras(i.ci.toString(), searchTerm);
+            const imgPreview = i.comprobante ? `<img src="${i.comprobante}" class="img-thumb" onclick="verImagen('${i.comprobante}')">` : 'Sin imagen';
+            html += `<div class="list-item">
+                <div class="inscrito-info">
+                    <strong>${nombreResaltado} ${apellidoResaltado}</strong><br>
+                    CI: ${ciResaltado} | ${i.correo}
+                    <div style="margin-top:5px;">${imgPreview}</div>
+                </div>
+                <div class="inscrito-actions">
+                    <button class="btn btn-sm ${i.pagoVerificado ? 'btn-warning' : 'btn-success'}" onclick="togglePago('${i.id}')">
+                        ${i.pagoVerificado ? 'Quitar pago' : 'Validar pago'}
+                    </button>
+                    <button class="btn btn-sm ${i.presente ? 'btn-warning' : 'btn-success'}" onclick="toggleAsistencia('${i.id}')">
+                        ${i.presente ? 'Quitar asistencia' : 'Marcar asistencia'}
+                    </button>
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+    }
+
+    window.buscarInscritos = function() {
+        const input = document.getElementById('searchInput');
+        searchTerm = input ? input.value : '';
+        actualizarListaInscritos();
+    };
+    window.limpiarBusqueda = function() {
+        searchTerm = '';
+        const input = document.getElementById('searchInput');
+        if (input) input.value = '';
+        actualizarListaInscritos();
+    };
+
+    function renderInscritos() {
+        return `
+            <div class="section-card">
+                <div class="section-title"><i class="fas fa-users"></i> Lista de inscritos</div>
+                <div class="search-container">
+                    <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar por nombre, apellido o cédula (ignora espacios)" value="${searchTerm}" onkeyup="buscarInscritos()">
+                    <button class="btn" onclick="buscarInscritos()"><i class="fas fa-search"></i> Buscar</button>
+                    <button class="btn" style="background:#64748b;" onclick="limpiarBusqueda()"><i class="fas fa-times"></i> Limpiar</button>
+                    <button class="btn" onclick="exportarExcel()"><i class="fas fa-file-excel"></i> Exportar</button>
+                </div>
+                <div id="listaInscritosContainer"></div>
+            </div>
+        `;
+    }
+
+    // ==================== RENDER OTRAS SECCIONES ====================
+    function renderDashboard() {
+        const total = inscritos.length, pagos = inscritos.filter(i=>i.pagoVerificado).length, presentes = inscritos.filter(i=>i.presente).length;
+        return `
+            <div class="kpi-grid">
+                <div class="kpi-card"><div class="kpi-info"><h3>Inscritos</h3><div class="kpi-number">${total}</div></div><div class="kpi-icon"><i class="fas fa-users"></i></div></div>
+                <div class="kpi-card"><div class="kpi-info"><h3>Pagos verificados</h3><div class="kpi-number">${pagos}</div></div><div class="kpi-icon"><i class="fas fa-credit-card"></i></div></div>
+                <div class="kpi-card"><div class="kpi-info"><h3>Asistencia confirmada</h3><div class="kpi-number">${presentes}</div></div><div class="kpi-icon"><i class="fas fa-check-circle"></i></div></div>
+                <div class="kpi-card"><div class="kpi-info"><h3>Actividades</h3><div class="kpi-number">${agenda.length}</div></div><div class="kpi-icon"><i class="fas fa-calendar"></i></div></div>
+            </div>
+            <div class="section-card">
+                <div class="section-title"><i class="fas fa-info-circle"></i> Resumen del evento</div>
+                <p>📅 ${new Date(eventInfo.fecha).toLocaleDateString('es-ES')} - ${eventInfo.horaInicio} a ${eventInfo.horaFin}</p>
+                <canvas id="chartInscritos" style="max-height:250px; margin-top:1rem;"></canvas>
+            </div>
+        `;
+    }
+
+    function renderEvento() {
+        return `<div class="section-card">
+            <div class="section-title"><i class="fas fa-calendar-alt"></i> Configuración del Evento</div>
+            <div class="form-group"><label>Descripción</label><textarea id="descEvento" rows="3">${eventInfo.descripcion}</textarea></div>
+            <div class="form-group"><label>Fecha</label><input type="date" id="fechaEvento" value="${eventInfo.fecha}"></div>
+            <div class="form-group"><label>Hora inicio</label><input type="time" id="horaInicio" value="${eventInfo.horaInicio}"></div>
+            <div class="form-group"><label>Hora fin</label><input type="time" id="horaFin" value="${eventInfo.horaFin}"></div>
+            <button class="btn" onclick="guardarEvento()">Guardar cambios</button>
+        </div>`;
+    }
+
+    // Función para exportar agenda a PDF
+    function exportarAgendaPDF() {
+        // Construir HTML para el PDF
+        const fechaEvento = new Date(eventInfo.fecha).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+        let tablaHTML = `
+            <div class="pdf-agenda">
+                <div class="pdf-header">
+                    <img src="assets/logo.png" alt="Logo">
+                    <h2>III SEMINARIO DE ACTUALIZACIÓN QUIRÚRGICA</h2>
+                    <p>${fechaEvento} - ${eventInfo.horaInicio} a ${eventInfo.horaFin}</p>
+                </div>
+                <table class="pdf-table">
+                    <thead>
+                        <tr><th>Hora</th><th>Tema</th><th>Expositor / Responsable</th></tr>
+                    </thead>
+                    <tbody>
+        `;
+        agenda.forEach(item => {
+            tablaHTML += `<tr><td>${item.hora}</td><td>${item.tema}</td><td>${item.speaker && item.speaker !== '' ? item.speaker : '---'}</td></tr>`;
+        });
+        tablaHTML += `
+                    </tbody>
+                </table>
+                <div class="pdf-footer">
+                    Seminario USCA - ${fechaEvento}
+                </div>
+            </div>
+        `;
+        // Crear un elemento temporal para generar el PDF
+        const element = document.createElement('div');
+        element.innerHTML = tablaHTML;
+        document.body.appendChild(element);
+        const opt = {
+            margin: [0.5, 0.5, 0.5, 0.5],
+            filename: `agenda_seminario_${eventInfo.fecha}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, letterRendering: true },
+            jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+        html2pdf().set(opt).from(element).save().then(() => {
+            document.body.removeChild(element);
+        }).catch(err => {
+            console.error('Error al generar PDF:', err);
+            document.body.removeChild(element);
+            alert('Error al generar el PDF. Intenta de nuevo.');
+        });
+    }
+
+    function renderAgenda() {
+        let html = `<div class="section-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <div class="section-title"><i class="fas fa-list-ul"></i> Agenda del Evento</div>
+                <button class="btn" onclick="exportarAgendaPDF()"><i class="fas fa-file-pdf"></i> Exportar agenda a PDF</button>
+            </div>
+            <div class="section-title"><i class="fas fa-plus-circle"></i> Agregar actividad</div>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;">
+                <input type="time" id="nuevaHora" style="flex:1;">
+                <input type="text" id="nuevoTema" placeholder="Tema" style="flex:2;">
+                <input type="text" id="nuevoSpeaker" placeholder="Expositor" style="flex:2;">
+                <button class="btn" onclick="agregarActividad()">➕ Agregar</button>
+            </div>
+            <div class="section-title"><i class="fas fa-list"></i> Actividades actuales</div>
+            <div id="listaAgenda">`;
+        agenda.forEach(a => {
+            html += `<div class="list-item">
+                <div><strong>${a.hora}</strong> - ${a.tema}<br><small>${a.speaker||''}</small></div>
+                <button class="btn btn-sm btn-danger" onclick="eliminarActividad('${a.id}')">Eliminar</button>
+            </div>`;
+        });
+        html += `</div></div>`;
+        return html;
+    }
+
+    function renderAuspiciantes() {
+        let html = `<div class="section-card">
+            <div class="section-title"><i class="fas fa-handshake"></i> Agregar auspiciante</div>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;">
+                <input type="text" id="nombreAuspiciante" placeholder="Nombre" style="flex:2;">
+                <input type="file" id="imagenAuspiciante" accept="image/*" style="flex:2;">
+                <button class="btn" onclick="agregarAuspiciante()">➕ Agregar</button>
+            </div>
+            <div class="section-title"><i class="fas fa-building"></i> Auspiciantes actuales</div>
+            <div id="listaAuspiciantes">`;
+        auspiciantes.forEach(a => {
+            html += `<div class="list-item">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    ${a.imagen ? `<img src="${a.imagen}" style="height:40px; border-radius:8px;">` : '<i class="fas fa-building" style="font-size:1.8rem;"></i>'}
+                    <strong>${a.nombre}</strong>
+                </div>
+                <button class="btn btn-sm btn-danger" onclick="eliminarAuspiciante('${a.id}')">Eliminar</button>
+            </div>`;
+        });
+        html += `</div></div>`;
+        return html;
+    }
+
+    function renderScanner() {
+        return `<div class="section-card">
+            <div class="section-title"><i class="fas fa-qrcode"></i> Escáner QR</div>
+            <p>Acerca el código QR del carnet para cambiar asistencia (toggle).</p>
+            <div class="scanner-container">
+                <video id="scannerVideo" playsinline></video>
+                <div style="margin-top:1rem;">
+                    <button class="btn" id="btnIniciar" onclick="iniciarEscaner()"><i class="fas fa-video"></i> Iniciar cámara</button>
+                    <button class="btn btn-danger" id="btnDetener" onclick="detenerEscaner()" style="display:none;"><i class="fas fa-stop"></i> Detener</button>
+                </div>
+                <div id="scannerResultado" style="margin-top:1rem;"></div>
+            </div>
+        </div>`;
+    }
+
+    // ==================== CRUD ====================
+    window.guardarEvento = function() {
+        eventInfo.descripcion = document.getElementById('descEvento').value;
+        eventInfo.fecha = document.getElementById('fechaEvento').value;
+        eventInfo.horaInicio = document.getElementById('horaInicio').value;
+        eventInfo.horaFin = document.getElementById('horaFin').value;
+        guardarDatos();
+        alert("Evento actualizado");
+        cambiarSeccion('dashboard');
+    };
+    window.agregarActividad = function() {
+        let hora = document.getElementById('nuevaHora').value, tema = document.getElementById('nuevoTema').value;
+        if(!hora || !tema) { alert("Completa hora y tema"); return; }
+        agenda.push({ id: Date.now().toString(), hora, tema, speaker: document.getElementById('nuevoSpeaker').value });
+        guardarDatos();
+        cambiarSeccion('agenda');
+    };
+    window.eliminarActividad = function(id) {
+        agenda = agenda.filter(a => a.id !== id);
+        guardarDatos();
+        cambiarSeccion('agenda');
+    };
+    window.agregarAuspiciante = function() {
+        let nombre = document.getElementById('nombreAuspiciante').value.trim();
+        if(!nombre) { alert("Ingrese nombre"); return; }
+        let file = document.getElementById('imagenAuspiciante').files[0];
+        let reader = new FileReader();
+        reader.onload = e => {
+            auspiciantes.push({ id: Date.now().toString(), nombre, imagen: e.target.result });
+            guardarDatos();
+            cambiarSeccion('auspiciantes');
+        };
+        if(file) reader.readAsDataURL(file);
+        else { auspiciantes.push({ id: Date.now().toString(), nombre, imagen: null }); guardarDatos(); cambiarSeccion('auspiciantes'); }
+        document.getElementById('nombreAuspiciante').value = '';
+        document.getElementById('imagenAuspiciante').value = '';
+    };
+    window.eliminarAuspiciante = function(id) {
+        auspiciantes = auspiciantes.filter(a => a.id !== id);
+        guardarDatos();
+        cambiarSeccion('auspiciantes');
+    };
+    window.verImagen = function(base64) {
+        document.getElementById('imgGrande').src = base64;
+        document.getElementById('modalImagen').classList.add('active');
+    };
+    window.cerrarModalImagen = function() {
+        document.getElementById('modalImagen').classList.remove('active');
+    };
+    window.exportarExcel = function() {
+        let csv = "Nombre,Cédula,Email,Pago verificado,Asistencia\n";
+        inscritos.forEach(i => {
+            csv += `"${i.nombre} ${i.apellido}","${i.ci}","${i.correo}","${i.pagoVerificado ? 'Sí' : 'No'}","${i.presente ? 'Presente' : 'Ausente'}"\n`;
+        });
+        let blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+        let link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = "inscritos.csv";
+        link.click();
+        URL.revokeObjectURL(link.href);
+    };
+
+    // ==================== ESCÁNER QR ====================
+    window.iniciarEscaner = function() {
+        let video = document.getElementById('scannerVideo');
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(stream => {
+            scannerStream = stream;
+            video.srcObject = stream;
+            video.play();
+            document.getElementById('btnIniciar').style.display = 'none';
+            document.getElementById('btnDetener').style.display = 'inline-block';
+            scannerActive = true;
+            escanearQR();
+        }).catch(err => alert("Error cámara: " + err.message));
+    };
+    window.detenerEscaner = function() {
+        scannerActive = false;
+        if(scannerAnimation) cancelAnimationFrame(scannerAnimation);
+        if(scannerStream) { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
+        let video = document.getElementById('scannerVideo');
+        if(video) video.srcObject = null;
+        document.getElementById('btnIniciar').style.display = 'inline-block';
+        document.getElementById('btnDetener').style.display = 'none';
+    };
+    function escanearQR() {
+        if(!scannerActive) return;
+        let video = document.getElementById('scannerVideo');
+        if(video.videoWidth === 0) { scannerAnimation = requestAnimationFrame(escanearQR); return; }
+        let canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        let ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        let code = jsQR(imageData.data, canvas.width, canvas.height);
+        if(code) {
+            let inscrito = inscritos.find(i => i.id === code.data);
+            let resultadoDiv = document.getElementById('scannerResultado');
+            if(inscrito) {
+                inscrito.presente = !inscrito.presente;
+                guardarDatos();
+                resultadoDiv.innerHTML = `<span style="color:green;">✅ Asistencia cambiada a ${inscrito.presente ? 'Presente' : 'Ausente'} para ${inscrito.nombre}</span>`;
+                setTimeout(() => resultadoDiv.innerHTML = '', 3000);
+                detenerEscaner();
+                actualizarListaInscritos();
+            } else {
+                resultadoDiv.innerHTML = `<span style="color:red;">❌ Código no válido</span>`;
+                setTimeout(() => resultadoDiv.innerHTML = '', 2000);
+            }
+            return;
+        }
+        scannerAnimation = requestAnimationFrame(escanearQR);
+    }
+
+    // ==================== NAVEGACIÓN ====================
+    function cambiarSeccion(seccion) {
+        let content = document.getElementById('mainContent');
+        if(seccion === 'dashboard') {
+            content.innerHTML = renderDashboard();
+            setTimeout(() => {
+                let ctx = document.getElementById('chartInscritos')?.getContext('2d');
+                if(ctx) {
+                    let presentes = inscritos.filter(i=>i.presente).length;
+                    new Chart(ctx, { type: 'doughnut', data: { labels: ['Confirmados', 'Pendientes'], datasets: [{ data: [presentes, inscritos.length - presentes], backgroundColor: ['#16c784', '#e94560'] }] } });
+                }
+            }, 50);
+        } else if(seccion === 'evento') content.innerHTML = renderEvento();
+        else if(seccion === 'agenda') content.innerHTML = renderAgenda();
+        else if(seccion === 'auspiciantes') content.innerHTML = renderAuspiciantes();
+        else if(seccion === 'inscritos') {
+            content.innerHTML = renderInscritos();
+            actualizarListaInscritos();
+        }
+        else if(seccion === 'scanner') content.innerHTML = renderScanner();
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        document.querySelector(`.nav-item[data-tab="${seccion}"]`).classList.add('active');
+        if(seccion !== 'scanner') detenerEscaner();
+    }
+
+    // ==================== LOGIN / LOGOUT ====================
+    window.verificarLogin = function() {
+        let pass = document.getElementById('adminPassword').value;
+        if(pass === 'usca2026') {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('adminPanel').classList.add('active');
+            cargarDatos();
+            cambiarSeccion('dashboard');
+        } else {
+            document.getElementById('loginError').innerText = '❌ Contraseña incorrecta';
+        }
+    };
+    window.cerrarSesion = function() {
+        detenerEscaner();
+        document.getElementById('adminPanel').classList.remove('active');
+        document.getElementById('loginScreen').style.display = 'flex';
+        document.getElementById('adminPassword').value = '';
+        document.getElementById('loginError').innerText = '';
+    };
+
+    // Inicializar eventos de navegación
+    document.querySelectorAll('.nav-item').forEach(el => {
+        el.addEventListener('click', () => cambiarSeccion(el.getAttribute('data-tab')));
+    });
+    // Exponer función de exportación para el botón
+    window.exportarAgendaPDF = exportarAgendaPDF;
+</script>
+</body>
+</html>

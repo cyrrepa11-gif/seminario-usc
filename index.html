@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>III Seminario de Actualización Quirúrgica - USCA</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+
+<header>
+    <div class="header-container">
+        <div class="logo">
+            <img src="assets/logo.png" alt="Actualiza Médica - SEAM USCA" style="height: 70px; width: auto; vertical-align: middle;">
+            <span style="margin-left: 10px; font-size: 1.4rem;">SEMINARIO USCA</span>
+        </div>
+        <nav>
+            <a href="#" onclick="scrollToSection('inicio')">Inicio</a>
+            <a href="#" onclick="scrollToSection('agenda')">Agenda</a>
+            <button class="admin-btn" onclick="window.open('admin.html', '_blank')">
+                <i class="fas fa-lock"></i> Admin
+            </button>
+        </nav>
+    </div>
+</header>
+
+<section class="hero" id="inicio">
+    <div class="hero-content">
+        <h1>III Seminario de Actualización Quirúrgica</h1>
+        <div class="hero-info">
+            <div class="info-item"><div>📅 Fecha</div><div class="info-item-value" id="fechaEvento">8 de Agosto 2026</div></div>
+            <div class="info-item"><div>⏰ Horario</div><div class="info-item-value" id="horaEvento">8:00 AM - 5:00 PM</div></div>
+            <div class="info-item"><div>📍 Ubicación</div><div class="info-item-value">USCA</div></div>
+        </div>
+    </div>
+</section>
+
+<section class="auspiciantes-section">
+    <h2 class="section-title">Auspiciantes</h2>
+    <div class="auspiciantes-carousel">
+        <div class="carousel-inner-custom" id="carouselAuspiciantes"></div>
+    </div>
+</section>
+
+<section class="descripcion-section">
+    <h2 class="section-title">Sobre el Evento</h2>
+    <div class="descripcion-content" id="descripcionEvento"></div>
+</section>
+
+<section class="agenda-section" id="agenda">
+    <h2 class="section-title">Agenda del Evento</h2>
+    <p class="section-subtitle">Programa completo de actividades</p>
+    <div class="agenda-grid" id="agendaGrid"></div>
+</section>
+
+<section class="cta-section">
+    <h2 class="section-title">¿Listo para participar?</h2>
+    <button class="cta-btn" onclick="abrirModalInscripcion()"><i class="fas fa-pen-fancy"></i> Inscribirme Ahora</button>
+</section>
+
+<!-- Modal Inscripción -->
+<div class="modal-inscripcion" id="modalInscripcion">
+    <div class="modal-content-custom">
+        <span class="close-modal" onclick="cerrarModalInscripcion()">&times;</span>
+        <h2>Formulario de Inscripción</h2>
+        <form id="inscripcionForm" onsubmit="registrarInscrito(event)">
+            <div class="form-group"><label>Comprobante de Pago</label><label class="file-input-label" for="fileInput">📎 PNG • JPG • JPEG</label><input type="file" id="fileInput" accept=".png,.jpg,.jpeg" onchange="handleFileUpload(event)"></div>
+            <div id="imagePreview"></div>
+            <div class="form-group"><label>Nombre</label><input type="text" id="nombre" required></div>
+            <div class="form-group"><label>Apellido</label><input type="text" id="apellido" required></div>
+            <div class="form-group"><label>Cédula</label><input type="number" id="ci" required></div>
+            <div class="form-group"><label>Email</label><input type="email" id="correo" required></div>
+            <button type="submit" class="btn-submit">Registrarme</button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Carnet -->
+<div class="modal-carnet" id="modalCarnet">
+    <div class="carnet-container">
+        <span class="close-carnet" onclick="cerrarCarnet()">&times;</span>
+        <h2>Tu Carnet de Asistencia</h2>
+        <div class="carnet">
+            <div class="carnet-header"><img src="assets/logo.png" style="height: 40px; margin-right: 10px;"> III SEMINARIO USCA</div>
+            <div class="carnet-nombre" id="carnetNombre"></div>
+            <div class="carnet-ci" id="carnetCI"></div>
+            <div id="carnetQR"></div>
+            <div class="carnet-footer">8 de Agosto 2026</div>
+        </div>
+        <button class="btn-descargar-carnet" onclick="descargarCarnet()">Descargar Carnet</button>
+    </div>
+</div>
+
+<script>
+    // ==================== DATOS INICIALES Y LOCALSTORAGE ====================
+    let agendaItems = [];
+    let auspiciantesItems = [];
+    let inscritosItems = [];
+    let eventInfo = {};
+    let uploadedImage = null;
+
+    function guardarTodo() {
+        localStorage.setItem('agenda_items', JSON.stringify(agendaItems));
+        localStorage.setItem('auspiciantes_items', JSON.stringify(auspiciantesItems));
+        localStorage.setItem('inscritos_items', JSON.stringify(inscritosItems));
+        localStorage.setItem('evento_info', JSON.stringify(eventInfo));
+    }
+
+    function cargarTodo() {
+        agendaItems = JSON.parse(localStorage.getItem('agenda_items') || '[{"id":"1","hora":"08:00","tema":"Bienvenida","speaker":"Director"},{"id":"2","hora":"09:00","tema":"Laparoscopia","speaker":"Dr. García"}]');
+        auspiciantesItems = JSON.parse(localStorage.getItem('auspiciantes_items') || '[]');
+        inscritosItems = JSON.parse(localStorage.getItem('inscritos_items') || '[]');
+        eventInfo = JSON.parse(localStorage.getItem('evento_info') || '{"descripcion":"Evento de actualización quirúrgica","fecha":"2026-08-08","horaInicio":"08:00","horaFin":"17:00"}');
+    }
+
+    // ==================== MOSTRAR EN PÁGINA ====================
+    function mostrarAgenda() {
+        const grid = document.getElementById('agendaGrid');
+        if(!grid) return;
+        if(agendaItems.length===0) grid.innerHTML='<p>No hay actividades</p>';
+        else grid.innerHTML = agendaItems.map(item => `
+            <div class="agenda-card">
+                <div class="agenda-time">🕒 ${item.hora}</div>
+                <div class="agenda-topic">${item.tema}</div>
+                ${item.speaker ? `<div class="agenda-speaker">👨‍⚕️ ${item.speaker}</div>` : ''}
+            </div>
+        `).join('');
+    }
+
+    function mostrarAuspiciantes() {
+        const container = document.getElementById('carouselAuspiciantes');
+        if(!container) return;
+        if(auspiciantesItems.length===0) { container.innerHTML = '<p style="text-align:center;">Próximamente auspiciantes</p>'; return; }
+        const items = [...auspiciantesItems, ...auspiciantesItems].map(a => `
+            <div class="auspiciante-item">
+                ${a.imagen ? `<img src="${a.imagen}" class="auspiciante-logo" style="height:80px;">` : `<div style="font-size:3rem;">🏥</div>`}
+                <div class="auspiciante-name">${a.nombre}</div>
+            </div>
+        `).join('');
+        container.innerHTML = items;
+    }
+
+    function mostrarInfoEvento() {
+        const fecha = new Date(eventInfo.fecha+'T00:00:00');
+        document.getElementById('fechaEvento').innerText = fecha.toLocaleDateString('es-ES', {year:'numeric',month:'long',day:'numeric'});
+        document.getElementById('horaEvento').innerText = `${eventInfo.horaInicio} - ${eventInfo.horaFin}`;
+        document.getElementById('descripcionEvento').innerHTML = `<p>${eventInfo.descripcion}</p>`;
+    }
+
+    // ==================== INSCRIPCIÓN Y CARNET ====================
+    function abrirModalInscripcion() { document.getElementById('modalInscripcion').classList.add('active'); }
+    function cerrarModalInscripcion() { 
+        document.getElementById('modalInscripcion').classList.remove('active');
+        document.getElementById('inscripcionForm').reset();
+        document.getElementById('imagePreview').innerHTML = '';
+        uploadedImage = null;
+    }
+    function handleFileUpload(e) {
+        const file = e.target.files[0];
+        if(!file || !file.type.match('image.*')) { alert('Solo imágenes'); return; }
+        const reader = new FileReader();
+        reader.onload = (ev) => { uploadedImage = ev.target.result; document.getElementById('imagePreview').innerHTML = `<img src="${uploadedImage}" style="max-width:100%; max-height:150px;">`; };
+        reader.readAsDataURL(file);
+    }
+    function registrarInscrito(e) {
+        e.preventDefault();
+        if(!uploadedImage) { alert('Carga el comprobante'); return; }
+        const nombre = document.getElementById('nombre').value.trim();
+        const apellido = document.getElementById('apellido').value.trim();
+        const ci = document.getElementById('ci').value.trim();
+        const correo = document.getElementById('correo').value.trim();
+        if(!nombre||!apellido||!ci||!correo) { alert('Completa todos los campos'); return; }
+        const nuevo = { 
+            id: Date.now().toString(), 
+            nombre, 
+            apellido, 
+            ci, 
+            correo, 
+            comprobante: uploadedImage, 
+            fecha: new Date().toISOString(), 
+            pagoVerificado: false,
+            presente: false
+        };
+        inscritosItems.push(nuevo);
+        guardarTodo();
+        mostrarCarnet(`${nombre} ${apellido}`, ci, nuevo.id);
+        cerrarModalInscripcion();
+    }
+    function mostrarCarnet(nombreCompleto, ci, qrData) {
+        document.getElementById('carnetNombre').innerText = nombreCompleto.toUpperCase();
+        document.getElementById('carnetCI').innerText = `CI: ${ci}`;
+        const qrDiv = document.getElementById('carnetQR');
+        qrDiv.innerHTML = '';
+        new QRCode(qrDiv, { text: qrData, width: 150, height: 150, colorDark: "#0f3460", colorLight: "#ffffff" });
+        document.getElementById('modalCarnet').classList.add('active');
+    }
+    function cerrarCarnet() { document.getElementById('modalCarnet').classList.remove('active'); }
+    function descargarCarnet() { const carnet = document.querySelector('.carnet'); html2canvas(carnet, { scale:2 }).then(canvas=>{ const link = document.createElement('a'); link.download = 'carnet.png'; link.href = canvas.toDataURL(); link.click(); }).catch(()=>alert('Toma captura')); }
+    function scrollToSection(id) { document.getElementById(id).scrollIntoView({ behavior:'smooth' }); }
+
+    // ==================== INICIALIZAR ====================
+    cargarTodo();
+    mostrarAgenda();
+    mostrarAuspiciantes();
+    mostrarInfoEvento();
+    window.onclick = function(e) { if(e.target.classList.contains('modal-inscripcion')) cerrarModalInscripcion(); if(e.target.classList.contains('modal-carnet')) cerrarCarnet(); };
+</script>
+</body>
+</html>
