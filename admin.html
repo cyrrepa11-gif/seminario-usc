@@ -432,7 +432,15 @@
     };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-        // ==================== VARIABLES GLOBALES ====================
+    
+    // ==================== FUNCIÓN DE SEGURIDAD ====================
+    function safeGetElement(id) {
+        const el = document.getElementById(id);
+        if (!el) console.warn(`Elemento no encontrado: ${id}`);
+        return el;
+    }
+    
+    // ==================== VARIABLES GLOBALES ====================
     let agenda = [];            // { id, dia, hora, tema, speaker }
     let auspiciantes = [];
     let inscritos = [];
@@ -448,17 +456,20 @@
     let searchTerm = '';
     let filtros = { facultad: '', carrera: '', semestreAnio: '' };
     let currentDiaAdmin = 1;
+    let myChart = null; // para el gráfico
 
     // ==================== SESIÓN (persistente) ====================
     function checkSession() {
+        const loginScreen = safeGetElement('loginScreen');
+        const adminPanel = safeGetElement('adminPanel');
         if (sessionStorage.getItem('adminLogged') === 'true') {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('adminPanel').classList.add('active');
+            if (loginScreen) loginScreen.style.display = 'none';
+            if (adminPanel) adminPanel.classList.add('active');
             cargarDatos();
             cambiarSeccion('dashboard');
         } else {
-            document.getElementById('loginScreen').style.display = 'flex';
-            document.getElementById('adminPanel').classList.remove('active');
+            if (loginScreen) loginScreen.style.display = 'flex';
+            if (adminPanel) adminPanel.classList.remove('active');
         }
     }
 
@@ -467,19 +478,19 @@
         db.ref('agenda').on('value', snap => {
             const data = snap.val();
             agenda = data ? Object.values(data) : [];
-            if (document.getElementById('listaAgenda')) actualizarListaAgenda();
-            if (document.getElementById('chartInscritos')) actualizarDashboard();
+            if (safeGetElement('listaAgenda')) actualizarListaAgenda();
+            if (safeGetElement('chartInscritos')) actualizarDashboard();
         });
         db.ref('auspiciantes').on('value', snap => {
             const data = snap.val();
             auspiciantes = data ? Object.values(data) : [];
-            if (document.getElementById('listaAuspiciantes')) actualizarListaAuspiciantes();
+            if (safeGetElement('listaAuspiciantes')) actualizarListaAuspiciantes();
         });
         db.ref('inscritos').on('value', snap => {
             const data = snap.val();
             inscritos = data ? Object.values(data) : [];
-            if (document.getElementById('listaInscritosContainer')) actualizarListaInscritos();
-            if (document.getElementById('chartInscritos')) actualizarDashboard();
+            if (safeGetElement('listaInscritosContainer')) actualizarListaInscritos();
+            if (safeGetElement('chartInscritos')) actualizarDashboard();
         });
         db.ref('evento').on('value', snap => {
             if (snap.val()) eventInfo = snap.val();
@@ -494,17 +505,22 @@
                 };
                 db.ref('evento').set(eventInfo);
             }
-            if (document.getElementById('descEvento')) cargarEventoAlFormulario();
-            if (document.getElementById('chartInscritos')) actualizarDashboard();
+            if (safeGetElement('descEvento')) cargarEventoAlFormulario();
+            if (safeGetElement('chartInscritos')) actualizarDashboard();
         });
     }
 
     // ==================== DASHBOARD ====================
     function actualizarDashboard() {
+        const kpiContainer = safeGetElement('kpiContainer');
+        const resumenEvento = safeGetElement('resumenEvento');
+        const chartCanvas = safeGetElement('chartInscritos');
+        if (!kpiContainer || !resumenEvento) return;
+        
         const total = inscritos.length;
         const pagos = inscritos.filter(i => i.pagoVerificado).length;
         const presentes = inscritos.filter(i => i.presente).length;
-        document.getElementById('kpiContainer').innerHTML = `
+        kpiContainer.innerHTML = `
             <div class="kpi-card"><div><div class="kpi-number">${total}</div><div>Inscritos</div></div><i class="fas fa-users"></i></div>
             <div class="kpi-card"><div><div class="kpi-number">${pagos}</div><div>Pagos OK</div></div><i class="fas fa-credit-card"></i></div>
             <div class="kpi-card"><div><div class="kpi-number">${presentes}</div><div>Asistencia</div></div><i class="fas fa-check-circle"></i></div>
@@ -512,10 +528,12 @@
         `;
         const fechaInicio = new Date(eventInfo.fechaInicio).toLocaleDateString('es-ES');
         const fechaFin = new Date(eventInfo.fechaFin).toLocaleDateString('es-ES');
-        document.getElementById('resumenEvento').innerHTML = `📅 ${fechaInicio} - ${fechaFin} | ${eventInfo.horaInicio} a ${eventInfo.horaFin}<br>📍 ${eventInfo.ubicacion}`;
-        const ctx = document.getElementById('chartInscritos')?.getContext('2d');
-        if (ctx) {
-            new Chart(ctx, { 
+        resumenEvento.innerHTML = `📅 ${fechaInicio} - ${fechaFin} | ${eventInfo.horaInicio} a ${eventInfo.horaFin}<br>📍 ${eventInfo.ubicacion}`;
+        
+        if (chartCanvas && typeof Chart !== 'undefined') {
+            if (myChart) myChart.destroy();
+            const ctx = chartCanvas.getContext('2d');
+            myChart = new Chart(ctx, { 
                 type: 'doughnut', 
                 data: { labels: ['Confirmados', 'Pendientes'], datasets: [{ data: [presentes, total - presentes], backgroundColor: ['#16c784', '#e94560'] }] } 
             });
@@ -524,28 +542,35 @@
 
     // ==================== EVENTO ====================
     function cargarEventoAlFormulario() {
-        document.getElementById('descEvento').value = eventInfo.descripcion;
-        document.getElementById('fechaInicio').value = eventInfo.fechaInicio;
-        document.getElementById('fechaFin').value = eventInfo.fechaFin;
-        document.getElementById('horaInicio').value = eventInfo.horaInicio;
-        document.getElementById('horaFin').value = eventInfo.horaFin;
-        document.getElementById('ubicacion').value = eventInfo.ubicacion || "USCA";
+        const desc = safeGetElement('descEvento');
+        if (desc) desc.value = eventInfo.descripcion || '';
+        const fechaInicio = safeGetElement('fechaInicio');
+        if (fechaInicio) fechaInicio.value = eventInfo.fechaInicio;
+        const fechaFin = safeGetElement('fechaFin');
+        if (fechaFin) fechaFin.value = eventInfo.fechaFin;
+        const horaInicio = safeGetElement('horaInicio');
+        if (horaInicio) horaInicio.value = eventInfo.horaInicio;
+        const horaFin = safeGetElement('horaFin');
+        if (horaFin) horaFin.value = eventInfo.horaFin;
+        const ubicacion = safeGetElement('ubicacion');
+        if (ubicacion) ubicacion.value = eventInfo.ubicacion || "USCA";
     }
 
     function guardarEvento() {
-        eventInfo.descripcion = document.getElementById('descEvento').value;
-        eventInfo.fechaInicio = document.getElementById('fechaInicio').value;
-        eventInfo.fechaFin = document.getElementById('fechaFin').value;
-        eventInfo.horaInicio = document.getElementById('horaInicio').value;
-        eventInfo.horaFin = document.getElementById('horaFin').value;
-        eventInfo.ubicacion = document.getElementById('ubicacion').value;
+        eventInfo.descripcion = safeGetElement('descEvento')?.value || '';
+        eventInfo.fechaInicio = safeGetElement('fechaInicio')?.value || '';
+        eventInfo.fechaFin = safeGetElement('fechaFin')?.value || '';
+        eventInfo.horaInicio = safeGetElement('horaInicio')?.value || '';
+        eventInfo.horaFin = safeGetElement('horaFin')?.value || '';
+        eventInfo.ubicacion = safeGetElement('ubicacion')?.value || '';
         db.ref('evento').set(eventInfo).then(() => alert("Evento actualizado")).catch(e => alert("Error: " + e.message));
         cambiarSeccion('dashboard');
     }
 
     // ==================== AGENDA (2 días, ordenada) ====================
     function actualizarListaAgenda() {
-        const container = document.getElementById('listaAgenda');
+        const container = safeGetElement('listaAgenda');
+        if (!container) return;
         const agendaDia = agenda.filter(item => item.dia == currentDiaAdmin).sort((a, b) => a.hora.localeCompare(b.hora));
         if (agendaDia.length === 0) {
             container.innerHTML = '<p>No hay actividades para este día.</p>';
@@ -560,16 +585,16 @@
     }
 
     function agregarActividad() {
-        let hora = document.getElementById('nuevaHora').value;
-        let tema = document.getElementById('nuevoTema').value.trim();
-        let speaker = document.getElementById('nuevoSpeaker').value.trim();
+        let hora = safeGetElement('nuevaHora')?.value;
+        let tema = safeGetElement('nuevoTema')?.value.trim();
+        let speaker = safeGetElement('nuevoSpeaker')?.value.trim();
         if (!hora || !tema) { alert("Completa hora y tema"); return; }
         const newId = Date.now().toString();
         db.ref('agenda/' + newId).set({ id: newId, dia: currentDiaAdmin, hora, tema, speaker })
             .then(() => {
-                document.getElementById('nuevaHora').value = '';
-                document.getElementById('nuevoTema').value = '';
-                document.getElementById('nuevoSpeaker').value = '';
+                if (safeGetElement('nuevaHora')) safeGetElement('nuevaHora').value = '';
+                if (safeGetElement('nuevoTema')) safeGetElement('nuevoTema').value = '';
+                if (safeGetElement('nuevoSpeaker')) safeGetElement('nuevoSpeaker').value = '';
                 cambiarSeccion('agenda');
             }).catch(err => alert("Error: " + err.message));
     }
@@ -581,13 +606,15 @@
     function cambiarDiaAdmin(dia) {
         currentDiaAdmin = dia;
         document.querySelectorAll('.dia-tab').forEach(tab => tab.classList.remove('active'));
-        document.getElementById(`tabDia${dia}`).classList.add('active');
+        const activeTab = safeGetElement(`tabDia${dia}`);
+        if (activeTab) activeTab.classList.add('active');
         actualizarListaAgenda();
     }
 
     // ==================== AUSPICIANTES ====================
     function actualizarListaAuspiciantes() {
-        const container = document.getElementById('listaAuspiciantes');
+        const container = safeGetElement('listaAuspiciantes');
+        if (!container) return;
         container.innerHTML = auspiciantes.map(a => `
             <div class="list-item">
                 <div style="display:flex; align-items:center; gap:10px;">
@@ -600,9 +627,9 @@
     }
 
     function agregarAuspiciante() {
-        let nombre = document.getElementById('nombreAuspiciante').value.trim();
+        let nombre = safeGetElement('nombreAuspiciante')?.value.trim();
         if (!nombre) { alert("Ingrese nombre"); return; }
-        const file = document.getElementById('imagenAuspiciante').files[0];
+        const file = safeGetElement('imagenAuspiciante')?.files[0];
         const newId = Date.now().toString();
         const setData = (img) => {
             db.ref('auspiciantes/' + newId).set({ id: newId, nombre, imagen: img || null })
@@ -616,8 +643,8 @@
         } else {
             setData(null);
         }
-        document.getElementById('nombreAuspiciante').value = '';
-        document.getElementById('imagenAuspiciante').value = '';
+        if (safeGetElement('nombreAuspiciante')) safeGetElement('nombreAuspiciante').value = '';
+        if (safeGetElement('imagenAuspiciante')) safeGetElement('imagenAuspiciante').value = '';
     }
 
     function eliminarAuspiciante(id) {
@@ -626,18 +653,20 @@
 
     // ==================== INSCRITOS (con filtros y orden) ====================
     function aplicarFiltros() {
-        filtros.facultad = document.getElementById('filtroFacultad').value;
-        filtros.carrera = document.getElementById('filtroCarrera').value;
-        filtros.semestreAnio = document.getElementById('filtroSemestre').value;
+        const filtroFacultad = safeGetElement('filtroFacultad');
+        const filtroCarrera = safeGetElement('filtroCarrera');
+        const filtroSemestre = safeGetElement('filtroSemestre');
+        if (filtroFacultad) filtros.facultad = filtroFacultad.value;
+        if (filtroCarrera) filtros.carrera = filtroCarrera.value;
+        if (filtroSemestre) filtros.semestreAnio = filtroSemestre.value;
         actualizarListaInscritos();
     }
 
     function actualizarListaInscritos() {
-        const container = document.getElementById('listaInscritosContainer');
+        const container = safeGetElement('listaInscritosContainer');
         if (!container) return;
 
         let filtrados = [...inscritos];
-        // Filtro por búsqueda
         const term = searchTerm.trim().toLowerCase();
         if (term) {
             filtrados = filtrados.filter(i => 
@@ -646,12 +675,10 @@
                 i.ci.toString().includes(term)
             );
         }
-        // Filtros adicionales
         if (filtros.facultad) filtrados = filtrados.filter(i => i.facultad === filtros.facultad);
         if (filtros.carrera) filtrados = filtrados.filter(i => i.carrera === filtros.carrera);
         if (filtros.semestreAnio) filtrados = filtrados.filter(i => i.semestreAnio == filtros.semestreAnio);
 
-        // Ordenar alfabéticamente por nombre
         filtrados.sort((a, b) => `${a.nombre} ${a.apellido}`.localeCompare(`${b.nombre} ${b.apellido}`));
 
         if (filtrados.length === 0) {
@@ -720,7 +747,7 @@
         }
     }
 
-    // 📌 CORRECCIÓN DEL PDF: tabla bien formateada, sin encimamiento
+    // ========== EXPORTAR INSCRITOS A PDF (CORREGIDO, SIN ENCIMAMIENTO) ==========
     function exportarInscritosPDF() {
         let filtrados = [...inscritos];
         const term = searchTerm.trim().toLowerCase();
@@ -740,7 +767,6 @@
         const fechaInicio = new Date(eventInfo.fechaInicio).toLocaleDateString('es-ES');
         const fechaFin = new Date(eventInfo.fechaFin).toLocaleDateString('es-ES');
         
-        // Construcción mejorada de la tabla con estilos inline para que no se encime
         let tablaHtml = `
             <div style="font-family:'Inter',sans-serif; padding:20px;">
                 <div style="text-align:center; border-bottom:2px solid #0f3460; margin-bottom:20px;">
@@ -784,7 +810,6 @@
                 <div style="text-align:center; margin-top:20px;">Seminario USCA - ${fechaInicio}</div>
             </div>
         `;
-        
         const element = document.createElement('div');
         element.innerHTML = tablaHtml;
         document.body.appendChild(element);
@@ -794,7 +819,8 @@
     // ==================== CARNET ADMIN ====================
     function mostrarCarnetAdmin(nombreCompleto, ci, id) {
         const qrTexto = `ID: ${id}\nNombre: ${nombreCompleto}\nCI: ${ci}`;
-        const container = document.getElementById('carnetAdminContent');
+        const container = safeGetElement('carnetAdminContent');
+        if (!container) return;
         container.innerHTML = `
             <div class="carnet">
                 <div style="position:relative; text-align:center;">
@@ -808,15 +834,23 @@
                 </div>
             </div>
         `;
-        const qrDiv = document.getElementById('carnetQRAdmin');
-        qrDiv.innerHTML = '';
-        new QRCode(qrDiv, { text: qrTexto, width: 120, height: 120, colorDark: "#0f3460", colorLight: "#ffffff" });
-        document.getElementById('modalCarnetAdmin').classList.add('active');
+        const qrDiv = safeGetElement('carnetQRAdmin');
+        if (qrDiv) {
+            qrDiv.innerHTML = '';
+            new QRCode(qrDiv, { text: qrTexto, width: 120, height: 120, colorDark: "#0f3460", colorLight: "#ffffff" });
+        }
+        const modal = safeGetElement('modalCarnetAdmin');
+        if (modal) modal.classList.add('active');
     }
 
-    function cerrarModalCarnetAdmin() { document.getElementById('modalCarnetAdmin').classList.remove('active'); }
+    function cerrarModalCarnetAdmin() {
+        const modal = safeGetElement('modalCarnetAdmin');
+        if (modal) modal.classList.remove('active');
+    }
+
     function descargarCarnetAdmin() {
         const carnet = document.querySelector('#carnetAdminContent .carnet');
+        if (!carnet) return;
         html2canvas(carnet, { scale: 2 }).then(canvas => {
             const link = document.createElement('a');
             link.download = 'carnet.png';
@@ -827,13 +861,16 @@
 
     // ==================== ESCÁNER QR OPTIMIZADO ====================
     function iniciarEscaner() {
-        const video = document.getElementById('scannerVideo');
+        const video = safeGetElement('scannerVideo');
+        if (!video) return;
         navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(stream => {
             scannerStream = stream;
             video.srcObject = stream;
             video.play();
-            document.getElementById('btnIniciar').style.display = 'none';
-            document.getElementById('btnDetener').style.display = 'inline-block';
+            const btnIniciar = safeGetElement('btnIniciar');
+            const btnDetener = safeGetElement('btnDetener');
+            if (btnIniciar) btnIniciar.style.display = 'none';
+            if (btnDetener) btnDetener.style.display = 'inline-block';
             scannerActive = true;
             escanearQR();
         }).catch(err => alert("Error cámara: " + err.message));
@@ -843,17 +880,18 @@
         scannerActive = false;
         if (scannerAnimation) cancelAnimationFrame(scannerAnimation);
         if (scannerStream) { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
-        const video = document.getElementById('scannerVideo');
+        const video = safeGetElement('scannerVideo');
         if (video) video.srcObject = null;
-        document.getElementById('btnIniciar').style.display = 'inline-block';
-        document.getElementById('btnDetener').style.display = 'none';
+        const btnIniciar = safeGetElement('btnIniciar');
+        const btnDetener = safeGetElement('btnDetener');
+        if (btnIniciar) btnIniciar.style.display = 'inline-block';
+        if (btnDetener) btnDetener.style.display = 'none';
     }
 
     function escanearQR() {
         if (!scannerActive) return;
-        const video = document.getElementById('scannerVideo');
-        if (video.videoWidth === 0) { scannerAnimation = requestAnimationFrame(escanearQR); return; }
-        // Usar canvas más pequeño para mayor velocidad
+        const video = safeGetElement('scannerVideo');
+        if (!video || video.videoWidth === 0) { scannerAnimation = requestAnimationFrame(escanearQR); return; }
         const scale = 0.4;
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth * scale;
@@ -869,24 +907,25 @@
             if (match) id = match[1];
             else if (/^\d+$/.test(qrText)) id = qrText;
             const inscrito = inscritos.find(i => i.id === id);
-            const resultadoDiv = document.getElementById('scannerResultado');
-            if (inscrito) {
-                resultadoDiv.innerHTML = `
-                    <div style="background:#e2e8f0; padding:8px; border-radius:8px; margin-top:8px;">
-                        <strong>${inscrito.nombre} ${inscrito.apellido}</strong><br>
-                        CI: ${inscrito.ci}<br>
-                        Facultad: ${inscrito.facultad || '-'}<br>
-                        Carrera: ${inscrito.carrera || '-'}<br>
-                        Semestre/Año: ${inscrito.semestreAnio || '-'}<br>
-                        Asistencia actual: ${inscrito.presente ? 'Presente' : 'Ausente'}<br>
-                        <button class="btn btn-sm" onclick="cambiarAsistenciaDesdeEscaner('${inscrito.id}')">Cambiar asistencia</button>
-                    </div>
-                `;
-            } else {
-                resultadoDiv.innerHTML = '<span style="color:red;">Código no válido</span>';
-                setTimeout(() => resultadoDiv.innerHTML = '', 2000);
+            const resultadoDiv = safeGetElement('scannerResultado');
+            if (resultadoDiv) {
+                if (inscrito) {
+                    resultadoDiv.innerHTML = `
+                        <div style="background:#e2e8f0; padding:8px; border-radius:8px; margin-top:8px;">
+                            <strong>${inscrito.nombre} ${inscrito.apellido}</strong><br>
+                            CI: ${inscrito.ci}<br>
+                            Facultad: ${inscrito.facultad || '-'}<br>
+                            Carrera: ${inscrito.carrera || '-'}<br>
+                            Semestre/Año: ${inscrito.semestreAnio || '-'}<br>
+                            Asistencia actual: ${inscrito.presente ? 'Presente' : 'Ausente'}<br>
+                            <button class="btn btn-sm" onclick="cambiarAsistenciaDesdeEscaner('${inscrito.id}')">Cambiar asistencia</button>
+                        </div>
+                    `;
+                } else {
+                    resultadoDiv.innerHTML = '<span style="color:red;">Código no válido</span>';
+                    setTimeout(() => resultadoDiv.innerHTML = '', 2000);
+                }
             }
-            // Pequeña pausa para evitar múltiples lecturas
             setTimeout(() => { if (scannerActive) requestAnimationFrame(escanearQR); }, 500);
             return;
         }
@@ -898,8 +937,11 @@
         if (idx !== -1) {
             inscritos[idx].presente = !inscritos[idx].presente;
             db.ref('inscritos/' + id).set(inscritos[idx]);
-            document.getElementById('scannerResultado').innerHTML = `<span style="color:green;">✅ Asistencia cambiada a ${inscritos[idx].presente ? 'Presente' : 'Ausente'}</span>`;
-            setTimeout(() => document.getElementById('scannerResultado').innerHTML = '', 1500);
+            const resultadoDiv = safeGetElement('scannerResultado');
+            if (resultadoDiv) {
+                resultadoDiv.innerHTML = `<span style="color:green;">✅ Asistencia cambiada a ${inscritos[idx].presente ? 'Presente' : 'Ausente'}</span>`;
+                setTimeout(() => resultadoDiv.innerHTML = '', 1500);
+            }
         }
     }
 
@@ -958,7 +1000,6 @@
     }
 
     function renderInscritos() {
-        // Crear opciones para los filtros de carrera
         const carreras = ["Medicina", "Odontología", "Bioquímica", "Química y Farmacia", "Licenciatura en Enfermería", "Licenciatura en Obstetricia", "Licenciatura en Fisioterapia y Kinesiología", "Derecho", "Ciencias de la Educación"];
         const optionsCarreras = carreras.map(c => `<option value="${c}">${c}</option>`).join('');
         return `<div class="section-card">
@@ -1015,7 +1056,7 @@
             const actividades = agenda.filter(a => a.dia == d).sort((a, b) => a.hora.localeCompare(b.hora));
             html += `<h3>Día ${d} - ${d === 1 ? dia1 : dia2}</h3>
                 <table style="width:100%; border-collapse:collapse;">
-                    <thead><tr style="background:#0f3460; color:white;"><th>Hora</th><th>Tema</th><th>Expositor</th><tr></thead>
+                    <thead><tr style="background:#0f3460; color:white;"><th>Hora</th><th>Tema</th><th>Expositor</th></tr></thead>
                     <tbody>`;
             actividades.forEach(a => html += `<tr><td style="border:1px solid #ddd; padding:8px;">${a.hora}</td><td style="border:1px solid #ddd; padding:8px;">${a.tema}</td><td style="border:1px solid #ddd; padding:8px;">${a.speaker || '---'}</td></tr>`);
             html += `</tbody></table><br>`;
@@ -1029,7 +1070,8 @@
 
     // ==================== NAVEGACIÓN Y UTILIDADES ====================
     function cambiarSeccion(seccion) {
-        const content = document.getElementById('mainContent');
+        const content = safeGetElement('mainContent');
+        if (!content) return;
         if (seccion === 'dashboard') {
             content.innerHTML = renderDashboard();
             setTimeout(() => actualizarDashboard(), 100);
@@ -1049,56 +1091,71 @@
             content.innerHTML = renderScanner();
         }
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        document.querySelector(`.nav-item[data-tab="${seccion}"]`).classList.add('active');
+        const activeNav = document.querySelector(`.nav-item[data-tab="${seccion}"]`);
+        if (activeNav) activeNav.classList.add('active');
         if (seccion !== 'scanner') detenerEscaner();
     }
 
-    window.buscarInscritos = function() {
-        const input = document.getElementById('searchInput');
+    function buscarInscritos() {
+        const input = safeGetElement('searchInput');
         searchTerm = input ? input.value : '';
         actualizarListaInscritos();
-    };
-    window.limpiarBusqueda = function() {
+    }
+
+    function limpiarBusqueda() {
         searchTerm = '';
-        const input = document.getElementById('searchInput');
+        const input = safeGetElement('searchInput');
         if (input) input.value = '';
-        document.getElementById('filtroFacultad').value = '';
-        document.getElementById('filtroCarrera').value = '';
-        document.getElementById('filtroSemestre').value = '';
+        const filtroFacultad = safeGetElement('filtroFacultad');
+        const filtroCarrera = safeGetElement('filtroCarrera');
+        const filtroSemestre = safeGetElement('filtroSemestre');
+        if (filtroFacultad) filtroFacultad.value = '';
+        if (filtroCarrera) filtroCarrera.value = '';
+        if (filtroSemestre) filtroSemestre.value = '';
         filtros = { facultad: '', carrera: '', semestreAnio: '' };
         actualizarListaInscritos();
-    };
-    window.verImagen = function(src) {
-        document.getElementById('imgGrande').src = src;
-        document.getElementById('modalImagen').classList.add('active');
-    };
-    window.cerrarModalImagen = function() {
-        document.getElementById('modalImagen').classList.remove('active');
-    };
-    window.aplicarFiltros = aplicarFiltros;
+    }
+
+    function verImagen(src) {
+        const imgGrande = safeGetElement('imgGrande');
+        if (imgGrande) imgGrande.src = src;
+        const modal = safeGetElement('modalImagen');
+        if (modal) modal.classList.add('active');
+    }
+
+    function cerrarModalImagen() {
+        const modal = safeGetElement('modalImagen');
+        if (modal) modal.classList.remove('active');
+    }
 
     // ==================== LOGIN / LOGOUT ====================
     function verificarLogin() {
-        const pass = document.getElementById('adminPassword').value;
+        const pass = safeGetElement('adminPassword')?.value;
         if (pass === 'usca2026') {
             sessionStorage.setItem('adminLogged', 'true');
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('adminPanel').classList.add('active');
+            const loginScreen = safeGetElement('loginScreen');
+            const adminPanel = safeGetElement('adminPanel');
+            if (loginScreen) loginScreen.style.display = 'none';
+            if (adminPanel) adminPanel.classList.add('active');
             cargarDatos();
             cambiarSeccion('dashboard');
         } else {
-            document.getElementById('loginError').innerText = 'Contraseña incorrecta';
+            const errorMsg = safeGetElement('loginError');
+            if (errorMsg) errorMsg.innerText = 'Contraseña incorrecta';
         }
     }
 
     function cerrarSesion() {
         sessionStorage.removeItem('adminLogged');
         detenerEscaner();
-        document.getElementById('adminPanel').classList.remove('active');
-        document.getElementById('loginScreen').style.display = 'flex';
-        document.getElementById('adminPassword').value = '';
-        document.getElementById('loginError').innerText = '';
-        // Forzar recarga para limpiar el estado correctamente
+        const adminPanel = safeGetElement('adminPanel');
+        const loginScreen = safeGetElement('loginScreen');
+        const passInput = safeGetElement('adminPassword');
+        const errorMsg = safeGetElement('loginError');
+        if (adminPanel) adminPanel.classList.remove('active');
+        if (loginScreen) loginScreen.style.display = 'flex';
+        if (passInput) passInput.value = '';
+        if (errorMsg) errorMsg.innerText = '';
         window.location.reload();
     }
 
@@ -1123,6 +1180,11 @@
     window.exportarInscritosPDF = exportarInscritosPDF;
     window.exportarAgendaPDF = exportarAgendaPDF;
     window.cambiarDiaAdmin = cambiarDiaAdmin;
+    window.buscarInscritos = buscarInscritos;
+    window.limpiarBusqueda = limpiarBusqueda;
+    window.verImagen = verImagen;
+    window.cerrarModalImagen = cerrarModalImagen;
+    window.aplicarFiltros = aplicarFiltros;
 
     // Eventos del sidebar
     document.querySelectorAll('.nav-item').forEach(el => {
